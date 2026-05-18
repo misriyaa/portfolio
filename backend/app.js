@@ -37,8 +37,9 @@ mongoose
 // Multer Storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, path.join(__dirname, "uploads"));
   },
+
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
@@ -46,8 +47,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Static Folder
-app.use("/uploads", express.static("uploads"));
+// Static Upload Folder
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 // Routes
 app.post("/api/admin", addSkill);

@@ -4,15 +4,15 @@ import axios from "axios";
 const Project = () => {
   const [projects, setProjects] = useState([]);
 
+  // Note: Kept your variable name, but double check if it should be VITE_BACKEND_URL in your .env
   const BASE_URL = import.meta.env.VITE_BACKED_URL;
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/api/admin/projects`
-        );
+        const res = await axios.get(`${BASE_URL}/api/admin/projects`);
         setProjects(res.data.data || []);
+        console.log(res.data.data);
       } catch (err) {
         console.log(err);
       }
@@ -22,87 +22,101 @@ const Project = () => {
   }, []);
 
   return (
-    <section className="w-full bg-[#efefef] py-16 px-5 md:px-12">
-      <div className="max-w-7xl mx-auto">
-        {/* top */}
-        <div className="flex items-center justify-between mb-10">
+    <section className="bg-white py-24 px-6 md:px-12 lg:px-16 overflow-hidden">
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-20">
           <div>
-            <h1 className="text-3xl md:text-5xl font-black text-black leading-tight">
-              Featured
-            </h1>
-            <h1 className="text-3xl md:text-5xl italic text-black/40">
-              Projects
+            <p className="text-[10px] sm:text-xs tracking-[0.35em] font-bold text-yellow-500 uppercase mb-5">
+              Selected Works
+            </p>
+
+            <h1 className="text-[13vw] sm:text-[10vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter uppercase text-[#1a1a1a]">
+              Featured <br />
+              <span className="text-gray-300 italic font-light lowercase tracking-normal">
+                projects
+              </span>
             </h1>
           </div>
 
-          <div className="text-sm text-black/60 font-medium">
-            {projects.length} Projects
+          <div className="max-w-sm">
+            <p className="text-gray-500 text-sm sm:text-base leading-relaxed font-medium">
+              A curated collection of modern web experiences focused on
+              performance, interaction, scalability, and premium UI engineering.
+            </p>
           </div>
         </div>
 
-        {/* cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+        {/* Projects Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
           {projects.map((project, index) => (
-            <div
-              key={project._id}
-              className="relative group"
-            >
-              {/* huge number */}
-              <h1 className="absolute -left-3 bottom-20 z-20 text-[180px] md:text-[220px] leading-none font-black text-black pointer-events-none">
-                {index + 1}
-              </h1>
+            <div key={project._id} className="group relative">
+              {/* Card */}
+              <div className="relative z-10">
+                {/* Image */}
+                <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100">
+                  <img
+                    src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
+                    alt={project.title}
+                    className="w-full h-[420px] object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700"
+                    onError={(e) => {
+                      // If the image path is broken entirely, this prevents a blank space
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://placehold.co/600x400/e2e8f0/1e293b?text=Image+Not+Found";
+                    }}
+                  />
+                </div>
 
-              {/* image */}
-              <div className="overflow-hidden rounded-[40px] bg-white relative h-[500px]">
-                <img
-                  src={`${BASE_URL}/uploads/${project.image}`}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
-                />
-              </div>
+                {/* Content */}
+                <div className="pt-8">
+                  {/* Small line */}
+                  <div className="w-10 h-[2px] bg-yellow-500 mb-5 group-hover:w-20 transition-all duration-500" />
 
-              {/* content */}
-              <div className="pt-6 relative z-30">
-                <h2 className="text-2xl font-bold text-black mb-3">
-                  {project.title}
-                </h2>
+                  {/* Title */}
+                  <h2 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] uppercase leading-none mb-4">
+                    {project.title}
+                  </h2>
 
-                <p className="text-black/70 text-[15px] leading-7 mb-5">
-                  {project.description}
-                </p>
+                  {/* Description */}
+                  <p className="text-gray-500 text-sm md:text-[15px] leading-7 max-w-md mb-8 font-medium">
+                    {project.description}
+                  </p>
 
-                <div className="flex gap-3 flex-wrap">
-                  {project.liveLink && (
-                    <a
-                      href={project.liveLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-2 rounded-full bg-black text-white text-sm hover:bg-black/80 transition"
-                    >
-                      Live Preview
-                    </a>
-                  )}
+                  {/* Buttons */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    {project.liveLink && (
+                      <a
+                        href={project.liveLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-[#1a1a1a] text-white text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:bg-yellow-500 hover:text-black transition-all duration-300 font-bold"
+                      >
+                        View Live
+                      </a>
+                    )}
 
-                  {project.githubLink && (
-                    <a
-                      href={project.githubLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-2 rounded-full border border-black text-black text-sm hover:bg-black hover:text-white transition"
-                    >
-                      Github
-                    </a>
-                  )}
+                    {project.githubLink && (
+                      <a
+                        href={project.githubLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border border-gray-300 text-[#1a1a1a] text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:border-black transition-all duration-300 font-bold"
+                      >
+                        Github
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* bottom huge text */}
-        <div className="overflow-hidden mt-16">
-          <h1 className="text-[80px] md:text-[180px] font-black leading-none tracking-[-8px] text-black uppercase">
-            Projects
+        {/* Bottom typography */}
+        <div className="mt-24 overflow-hidden">
+          <h1 className="text-[18vw] md:text-[14vw] leading-none font-black tracking-[-0.08em] uppercase text-[#f5f5f5] whitespace-nowrap">
+            Creative Developer
           </h1>
         </div>
       </div>
