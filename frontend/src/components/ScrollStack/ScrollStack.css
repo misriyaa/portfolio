@@ -1,0 +1,26 @@
+.scroll-stack-scroller {
+  width: 100%;
+}
+
+.scroll-stack-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 120px;
+}
+
+.scroll-stack-card {
+  position: sticky;
+  top: 10vh;
+
+  width: 95%;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  height: 80vh;
+
+  border-radius: 40px;
+  overflow: hidden;
+
+  will-change: transform, filter;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}

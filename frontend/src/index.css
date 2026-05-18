@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+body {
+  /* Use a font that has lowercase support for the whole site */
+  font-family: 'Inter', sans-serif; 
+}
+
+/* Create a special class just for the big headings */
+.heading-font {
+  font-family: 'Bebas Neue', sans-serif;
+}
