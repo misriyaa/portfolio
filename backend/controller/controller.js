@@ -1,6 +1,6 @@
 import { Skill } from "../model/SkillsSchema.js";
-import { Project } from "../model/ProjectSchema.js";
-import { Profile } from "../model/ProfileSchema.js";
+import { Project } from "../model/projectSchema.js";
+import { Profile } from "../model/profileSchema.js";
 
 /* ================= SKILLS ================= */
 
