@@ -4,7 +4,7 @@ import axios from "axios";
 const Project = () => {
   const [projects, setProjects] = useState([]);
 
-  const BASE_URL = import.meta.env.VITE_BACKEND_URL;
+  const BASE_URL = import.meta.env.VITE_BACKED_URL;
 
   useEffect(() => {
     const fetchProjects = async () => {
