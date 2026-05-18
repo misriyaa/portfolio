@@ -1,8 +1,10 @@
+import { fileURLToPath } from "url";
+import path from "path";
+import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import multer from "multer";
-import path from "path";
 
 import {
   addSkill,
@@ -14,18 +16,25 @@ import {
   getBanner,
 } from "./controller/controller.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-/* ===== MongoDB ===== */
+// MongoDB Connection
 mongoose
-  .connect("mongodb://127.0.0.1:27017/portfolio")
+  .connect(process.env.MONGODB_URL)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
+  .catch((err) => console.log("MongoDB Error:", err));
 
-/* ===== Multer ===== */
+// Multer Storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
@@ -37,26 +46,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ===== Static folder ===== */
+// Static Folder
 app.use("/uploads", express.static("uploads"));
 
-/* ===== ROUTES ===== */
-
-// Skills
+// Routes
 app.post("/api/admin", addSkill);
 app.get("/api/admin", getSkills);
 
-// Projects
 app.post("/api/admin/projects", upload.single("image"), createProject);
 app.get("/api/admin/projects", getProjects);
 app.delete("/api/admin/projects/:id", deleteProject);
 
-// Banner (Profile)
 app.post("/api/admin/banner", upload.single("banner"), uploadBanner);
 app.get("/api/admin/banner", getBanner);
 
-/* ===== Server ===== */
-const PORT = 5000;
+// Server
+const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
