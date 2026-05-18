@@ -54,8 +54,7 @@ const Project = () => {
               {/* Card */}
               <div className="relative z-10">
                 {/* Image */}
-       <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9]">
-
+                <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100">
                  <img
   src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
   alt={project.title}
