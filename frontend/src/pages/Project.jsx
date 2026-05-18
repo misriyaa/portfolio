@@ -58,7 +58,7 @@ const Project = () => {
                   <img
                     src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
                     alt={project.title}
-                    className="w-full h-[420px] object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700"
+                    className="w-full h-[420px] object-contain bg-gray-100 grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700"
                     onError={(e) => {
                       // If the image path is broken entirely, this prevents a blank space
                       e.target.onerror = null;
