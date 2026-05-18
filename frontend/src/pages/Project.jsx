@@ -54,18 +54,12 @@ const Project = () => {
               {/* Card */}
               <div className="relative z-10">
                 {/* Image */}
-       <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9]">
-
-                 <img
-  src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
-  alt={project.title}
-  className="w-full h-[420px] object-fill grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700"
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src =
-      "https://placehold.co/600x400/e2e8f0/1e293b?text=Image+Not+Found";
-  }}
-/>
+                <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
+                  <img
+                    src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
+                    alt={project.title}
+                    className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
+                  />
                 </div>
 
                 {/* Content */}
