@@ -10,7 +10,7 @@ const Project = ({ isHomePage = false }) => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/admin/projects");
+        const res = await axios.get(`${import.meta.env.VITE_BACKED_URL}/api/admin/projects`);
         setProjects(res.data.data || []);
       } catch (err) {
         console.error("Error fetching projects:", err);
@@ -60,7 +60,7 @@ const Project = ({ isHomePage = false }) => {
                     {/* IMAGE */}
                     {project.image && (
                       <img
-                        src={`http://localhost:5000/uploads/${project.image}`}
+                        src={`${import.meta.env.VITE_BACKED_URL}/uploads/${project.image}`}
                         alt={project.title}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                       />

@@ -11,7 +11,7 @@ const Skills = () => {
   useEffect(() => {
     const fetchSkills = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/admin");
+        const res = await axios.get(`${import.meta.env.VITE_BACKED_URL}/api/admin`);
         // Keeping your dynamic reverse logic exactly as is
         setSkillData(res.data.reverse());
       } catch (error) {

@@ -9,7 +9,7 @@ const About = () => {
   useEffect(() => {
     const fetchBanner = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/admin/banner");
+        const res = await axios.get(`${import.meta.env.VITE_BACKED_URL}/api/admin/banner`);
         setBanner(res.data?.data?.banner || "");
       } catch (error) {
         console.error(error);
@@ -40,7 +40,7 @@ const About = () => {
           <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-full aspect-[4/5] bg-white overflow-hidden rounded-sm shadow-xl border border-gray-100">
             {banner ? (
               <img
-                src={`http://localhost:5000/uploads/${banner}`}
+                src={`${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
                 alt="Nafeesathul Misriya"
                 className="w-full h-full object-cover grayscale-[10%]"
               />

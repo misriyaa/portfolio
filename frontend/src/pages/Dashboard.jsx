@@ -45,7 +45,7 @@ const Dashboard = () => {
 
               try {
                 const res = await axios.post(
-                  "http://localhost:5000/api/admin",
+                  `${import.meta.env.VITE_BACKED_URL}/api/admin`,
                   data,
                 );
                 console.log(res.data);
@@ -130,7 +130,7 @@ const Dashboard = () => {
       formData.append("image", values.image);
 
       const res = await axios.post(
-        "http://localhost:5000/api/admin/projects",
+        `${import.meta.env.VITE_BACKED_URL}/api/admin/projects`,
         formData
       );
 
@@ -205,7 +205,7 @@ const Dashboard = () => {
                 formData.append("banner", values.banner);
 
                 const res = await axios.post(
-                  "http://localhost:5000/api/admin/banner",
+                  `${import.meta.env.VITE_BACKED_URL}/api/admin/banner`,
                   formData,
                 );
 
