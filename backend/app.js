@@ -5,6 +5,9 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import multer from "multer";
+import cloudinary from "./config/cloudinary.js";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+
 
 import {
   addSkill,
@@ -35,13 +38,11 @@ mongoose
   .catch((err) => console.log("MongoDB Error:", err));
 
 // Multer Storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "uploads"));
-  },
-
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "portfolio",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
