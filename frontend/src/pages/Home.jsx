@@ -44,7 +44,7 @@ const Home = () => {
             </p>
 
             <h1 className="text-[13vw] sm:text-[11vw] md:text-[9vw] lg:text-[8vw] xl:text-[7vw] font-black leading-[0.85] tracking-tighter uppercase text-[#1a1a1a]">
-              Software<br />
+              Web<br />
               <span className="text-yellow-500">Developer</span>
             </h1>
 
