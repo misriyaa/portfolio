@@ -56,7 +56,9 @@ const Project = () => {
                 {/* Image */}
                 <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
                   <img
-                    src={`${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
+                    src={project.image && (project.image.startsWith("http://") || project.image.startsWith("https://"))
+                      ? project.image
+                      : `${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
                     alt={project.title}
                     className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
                   />

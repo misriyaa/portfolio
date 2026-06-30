@@ -61,7 +61,7 @@ export const createProject = async (req, res) => {
       description,
       liveLink,
       githubLink,
-      image: req.file.filename,
+      image: req.file.path,
     });
 
     res.status(201).json({
@@ -112,7 +112,7 @@ export const uploadBanner = async (req, res) => {
       });
     }
 
-    const banner = req.file.filename;
+    const banner = req.file.path;
 
     let profile = await Profile.findOne();
 

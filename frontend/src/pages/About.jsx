@@ -40,7 +40,9 @@ const About = () => {
           <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-full aspect-[4/5] bg-white overflow-hidden rounded-sm shadow-xl border border-gray-100">
             {banner ? (
               <img
-                src={`${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
+                src={banner.startsWith("http://") || banner.startsWith("https://")
+                  ? banner
+                  : `${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
                 alt="Nafeesathul Misriya"
                 className="w-full h-full object-cover grayscale-[10%]"
               />

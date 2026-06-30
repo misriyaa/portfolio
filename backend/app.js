@@ -44,7 +44,9 @@ const storage = new CloudinaryStorage({
     folder: "portfolio",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
+
 });
+console.log("Cloudinary Storage Configured");
 
 const upload = multer({ storage });
 

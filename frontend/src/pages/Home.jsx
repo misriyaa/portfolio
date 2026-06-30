@@ -62,7 +62,9 @@ const Home = () => {
               <div className="w-[72vw] h-[90vw] sm:w-[56vw] sm:h-[72vw] md:w-[28vw] md:h-[38vw] bg-gray-50 overflow-hidden rounded-sm shadow-[16px_16px_0px_0px_rgba(234,179,8,0.15)] border border-gray-100">
                 {banner ? (
                   <img
-                    src={`${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
+                    src={banner.startsWith("http://") || banner.startsWith("https://")
+                      ? banner
+                      : `${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
                     alt="Nafeesathul Misriya"
                     className="w-full h-full object-cover object-top grayscale-[20%] hover:grayscale-0 transition-all duration-700"
                   />
