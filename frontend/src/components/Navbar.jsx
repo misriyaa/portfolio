@@ -15,25 +15,19 @@ const Navbar = () => {
       <div className="flex items-center justify-between w-full max-w-[1400px] bg-white/80 backdrop-blur-xl px-4 py-3 md:px-8 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100">
         
         {/* LEFT: Branding / Available Status */}
-        <div className="flex items-center gap-4">
-          <Link to="/" className="relative group">
-            <img
-              src={logo}
-              alt="Profile"
-              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm transition-transform group-hover:scale-110"
-            />
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-yellow-500 border-2 border-white rounded-full animate-pulse"></span>
-          </Link>
-          
-          <div className="hidden md:flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 leading-none">
-              Nafeesathul Misriya
-            </span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-400 mt-1">
-              Available for projects
-            </span>
-          </div>
-        </div>
+       <div className="flex items-center gap-4">
+  <Link to="/" className="relative group">
+    <div className="hidden md:flex flex-col">
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 leading-none">
+        Nafeesathul Misriya
+      </span>
+
+      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-400 mt-1">
+        Available for projects
+      </span>
+    </div>
+  </Link>
+</div>
 
         {/* CENTER: Desktop Links */}
         <ul className="hidden md:flex items-center gap-10">
