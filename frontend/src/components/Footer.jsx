@@ -1,7 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaInstagram, FaGithub, FaLinkedin } from "react-icons/fa";
+import api from "../config/api";
 
 const Footer = () => {
+  const [profile, setProfile] = useState({
+    email: "misriya8784@gmail.com",
+    phone: "+91 8714945730",
+    location: "India",
+    socialLinks: {
+      github: "https://github.com/misriyaa",
+      linkedin: "https://www.linkedin.com/in/nafeesathul-misriya-p/",
+      instagram: "#",
+    },
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/api/profile");
+        const data = res.data?.data;
+        if (isMounted && data) {
+          setProfile((prev) => ({
+            email: data.email || prev.email,
+            phone: data.phone || prev.phone,
+            location: data.location || prev.location,
+            socialLinks: {
+              ...prev.socialLinks,
+              ...(data.socialLinks || {}),
+            },
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching footer profile:", err);
+      }
+    };
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     // bg-[#fefce8] is Tailwind's default light yellow/cream background
     <footer className="w-full bg-yellow-500 text-zinc-900 px-6 md:px-12 py-24 font-sans overflow-hidden border-t border-yellow-200">
@@ -32,10 +72,10 @@ const Footer = () => {
               </span>
             </div>
             <a 
-              href="mailto:misriya8784@gmail.com" 
+              href={`mailto:${profile.email}`} 
               className="text-xl md:text-2xl font-black text-zinc-900 hover:text-yellow-100 transition-colors break-all"
             >
-              misriya8784@gmail.com
+              {profile.email}
             </a>
           </div>
 
@@ -48,10 +88,10 @@ const Footer = () => {
               </span>
             </div>
             <a 
-              href="tel:+918714945730" 
+              href={`tel:${profile.phone.replace(/\s+/g, "")}`} 
               className="text-xl md:text-2xl font-black text-zinc-900 hover:text-yellow-100 transition-colors"
             >
-              +91 8714945730
+              {profile.phone}
             </a>
           </div>
 
@@ -65,16 +105,15 @@ const Footer = () => {
             </div>
             <div className="flex items-center gap-4">
               {[
-                { icon: <FaGithub size={20} />, link: "https://github.com/misriyaa" },
-                { icon: <FaInstagram size={20} />, link: "#" },
-                { icon: <FaLinkedin size={20} />, link: "https://www.linkedin.com/in/nafeesathul-misriya-p/" }
+                { icon: <FaGithub size={20} />, link: profile.socialLinks?.github || "https://github.com/misriyaa" },
+                { icon: <FaInstagram size={20} />, link: profile.socialLinks?.instagram || "#" },
+                { icon: <FaLinkedin size={20} />, link: profile.socialLinks?.linkedin || "https://www.linkedin.com/in/nafeesathul-misriya-p/" }
               ].map((social, idx) => (
                 <a 
                   key={idx}
                   href={social.link} 
                   target="_blank"
                   rel="noreferrer"
-                  // Clean outline style with yellow border and background on hover
                   className="w-12 h-12 rounded-full border border-yellow-200 bg-white/60 flex items-center justify-center hover:bg-yellow-500 hover:border-yellow-500 hover:text-black transition-all duration-500 shadow-sm"
                 >
                   {social.icon}
@@ -93,7 +132,7 @@ const Footer = () => {
               © Copyright 2026. All Rights Reserved.
             </p>
             <p className="text-[10px] uppercase tracking-[0.25em] text-zinc-400 font-medium">
-              Nafeesathul Misriya P • Based in India
+              Nafeesathul Misriya P • Based in {profile.location}
             </p>
           </div>
 

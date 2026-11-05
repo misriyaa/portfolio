@@ -1,20 +1,39 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api, { API_BASE_URL } from "../config/api";
 
 const Home = () => {
   const [banner, setBanner] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchBanner = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKED_URL}/api/admin/banner`);
-        setBanner(res.data.data?.banner);
+        const res = await api.get("/api/admin/banner");
+        const bannerUrl = res.data?.data?.banner || res.data?.banner || "";
+        if (isMounted) {
+          setBanner(bannerUrl);
+        }
       } catch (err) {
-        console.error("Error fetching banner", err);
+        console.error("Error fetching banner:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
     fetchBanner();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const getImageSrc = (imagePath) => {
+    if (!imagePath) return "";
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return imagePath;
+    }
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
   return (
     <div className="w-full h-[100svh] bg-white text-[#1a1a1a] selection:bg-yellow-100 overflow-hidden font-sans">
@@ -58,17 +77,13 @@ const Home = () => {
               <div className="h-[34svh] md:h-[58svh] aspect-[4/5] bg-gray-50 overflow-hidden rounded-sm shadow-[16px_16px_0px_0px_rgba(234,179,8,0.15)] border border-gray-100">
                 {banner ? (
                   <img
-                    src={
-                      banner.startsWith("http://") || banner.startsWith("https://")
-                        ? banner
-                        : `${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`
-                    }
+                    src={getImageSrc(banner)}
                     alt="Nafeesathul Misriya"
                     className="w-full h-full object-cover object-top grayscale-[20%] hover:grayscale-0 transition-all duration-700"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300 italic text-sm">
-                    Loading visual...
+                    {loading ? "Loading visual..." : "Visual coming soon"}
                   </div>
                 )}
               </div>

@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Navbar from "./components/Navbar";
+import React from "react";
 import Home from "./pages/Home";
 import {
-    BrowserRouter as Router,
-    Routes,
-    Route,
-    Link,
-    useNavigate,
-    Outlet,
+  BrowserRouter as Router,
+  Routes,
+  Route,
 } from "react-router-dom";
 import About from "./pages/About";
 import Skills from "./pages/Skills";
@@ -17,35 +12,21 @@ import Contact from "./pages/Contact";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 
-
 const App = () => {
-  const [showIntro, setShowIntro] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowIntro(false);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-<Router>
-  <Routes>
-    <Route path="/" element={<Layout/>}>
-      <Route index element={<Home />} />
-      <Route path="about" element={<About />} />
-      <Route path="skills" element={<Skills/>} />
-      <Route path="project" element={<Project />} />
-      <Route path="contact" element={<Contact />} />
-    </Route>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="about" element={<About />} />
+          <Route path="skills" element={<Skills />} />
+          <Route path="project" element={<Project />} />
+          <Route path="contact" element={<Contact />} />
+        </Route>
 
-    {/* Example route WITHOUT navbar */}
-      <Route path="admin" element={<Dashboard/>} />
-
-  </Routes>
-</Router>
-
+        <Route path="admin" element={<Dashboard />} />
+      </Routes>
+    </Router>
   );
 };
 

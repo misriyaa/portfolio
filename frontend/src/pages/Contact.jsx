@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "../config/api";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -6,23 +7,82 @@ const Contact = () => {
   const [service, setService] = useState("");
   const [message, setMessage] = useState("");
   const [focused, setFocused] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState({ submitting: false, success: false, error: "" });
 
-  const handleSubmit = (e) => {
+  const [contactInfo, setContactInfo] = useState({
+    email: "misriya8784@gmail.com",
+    phone: "+91 8714945730",
+    location: "Kerala, India",
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchContactInfo = async () => {
+      try {
+        const res = await api.get("/api/profile");
+        const profile = res.data?.data;
+        if (isMounted && profile) {
+          setContactInfo({
+            email: profile.email || "misriya8784@gmail.com",
+            phone: profile.phone || "+91 8714945730",
+            location: profile.location || "Kerala, India",
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching contact profile:", err);
+      }
+    };
+    fetchContactInfo();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log({
-      name,
-      email,
-      service,
-      message,
-    });
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setStatus({ submitting: false, success: false, error: "Please fill in all required fields (Name, Email, Message)." });
+      return;
+    }
 
-    setSubmitted(true);
+    setStatus({ submitting: true, success: false, error: "" });
 
-    setTimeout(() => {
-      setSubmitted(false);
-    }, 3000);
+    try {
+      const res = await api.post("/api/contact", {
+        name: name.trim(),
+        email: email.trim(),
+        service: service.trim(),
+        message: message.trim(),
+      });
+
+      if (res.data?.success) {
+        setStatus({
+          submitting: false,
+          success: true,
+          error: "",
+        });
+        // Reset form ONLY on success
+        setName("");
+        setEmail("");
+        setService("");
+        setMessage("");
+
+        setTimeout(() => {
+          setStatus((prev) => ({ ...prev, success: false }));
+        }, 5000);
+      } else {
+        throw new Error(res.data?.message || "Failed to send message.");
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      setStatus({
+        submitting: false,
+        success: false,
+        error: err.response?.data?.message || err.message || "Failed to send message. Please try again.",
+      });
+    }
   };
 
   const underline = (field) => ({
@@ -109,6 +169,21 @@ const Contact = () => {
               className="space-y-10"
             >
 
+              {/* Status messages */}
+              {status.success && (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm font-semibold tracking-wide rounded-sm flex items-center gap-2">
+                  <span>✓</span>
+                  <span>Thank you! Your message has been saved in MongoDB and sent successfully.</span>
+                </div>
+              )}
+
+              {status.error && (
+                <div className="p-4 bg-red-50 border border-red-300 text-red-800 text-xs sm:text-sm font-semibold tracking-wide rounded-sm flex items-center gap-2">
+                  <span>⚠</span>
+                  <span>{status.error}</span>
+                </div>
+              )}
+
               {/* NAME + EMAIL */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
 
@@ -116,13 +191,14 @@ const Contact = () => {
                 <div className="relative">
 
                   <label className={labelClass}>
-                    Name
+                    Name *
                   </label>
 
                   <input
                     type="text"
                     placeholder="Your name"
                     value={name}
+                    required
                     onChange={(e) => setName(e.target.value)}
                     onFocus={() => setFocused("name")}
                     onBlur={() => setFocused("")}
@@ -140,13 +216,14 @@ const Contact = () => {
                 <div className="relative">
 
                   <label className={labelClass}>
-                    Email
+                    Email *
                   </label>
 
                   <input
                     type="email"
                     placeholder="your@email.com"
                     value={email}
+                    required
                     onChange={(e) => setEmail(e.target.value)}
                     onFocus={() => setFocused("email")}
                     onBlur={() => setFocused("")}
@@ -190,13 +267,14 @@ const Contact = () => {
               <div className="relative">
 
                 <label className={labelClass}>
-                  What Can I Help You With
+                  What Can I Help You With *
                 </label>
 
                 <textarea
                   placeholder="Hello I would like to enquire about..."
                   rows={5}
                   value={message}
+                  required
                   onChange={(e) => setMessage(e.target.value)}
                   onFocus={() => setFocused("message")}
                   onBlur={() => setFocused("")}
@@ -215,9 +293,18 @@ const Contact = () => {
 
                 <button
                   type="submit"
-                  className="px-12 py-4 font-black uppercase text-xs tracking-[0.25em] transition-all duration-500 bg-yellow-500 text-black hover:bg-black hover:text-white"
+                  disabled={status.submitting}
+                  className={`px-12 py-4 font-black uppercase text-xs tracking-[0.25em] transition-all duration-500 ${
+                    status.submitting
+                      ? "bg-zinc-300 text-zinc-600 cursor-not-allowed"
+                      : "bg-yellow-500 text-black hover:bg-black hover:text-white"
+                  }`}
                 >
-                  {submitted ? "Message Sent" : "Send Message"}
+                  {status.submitting
+                    ? "Sending..."
+                    : status.success
+                    ? "Message Sent"
+                    : "Send Message"}
                 </button>
 
                 <span className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-bold">
@@ -241,10 +328,10 @@ const Contact = () => {
               </p>
 
               <a
-                href="mailto:misriya8784@gmail.com"
+                href={`mailto:${contactInfo.email}`}
                 className="text-base sm:text-lg font-black text-zinc-800 hover:text-yellow-500 transition-colors break-all"
               >
-                misriya8784@gmail.com
+                {contactInfo.email}
               </a>
 
             </div>
@@ -257,10 +344,10 @@ const Contact = () => {
               </p>
 
               <a
-                href="tel:+918714945730"
+                href={`tel:${contactInfo.phone.replace(/\s+/g, "")}`}
                 className="text-base sm:text-lg font-black text-zinc-800 hover:text-yellow-500 transition-colors"
               >
-                +91 8714945730
+                {contactInfo.phone}
               </a>
 
             </div>
@@ -273,7 +360,7 @@ const Contact = () => {
               </p>
 
               <p className="text-base sm:text-lg font-black text-zinc-800">
-                Kerala, India
+                {contactInfo.location}
               </p>
 
             </div>
@@ -290,7 +377,7 @@ const Contact = () => {
           </span>
 
           <span className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold">
-            MERN Stack Developer. Kerala, India
+            MERN Stack Developer. {contactInfo.location}
           </span>
 
         </div>

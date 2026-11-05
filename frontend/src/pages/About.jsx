@@ -1,22 +1,49 @@
 import React, { useEffect, useState } from "react";
 import { FaInstagram, FaGithub, FaLinkedin } from "react-icons/fa";
-import axios from "axios";
+import api, { API_BASE_URL } from "../config/api";
 import ScrollVelocity from "../components/scrolltext/ScrollVelocity";
 
 const About = () => {
   const [banner, setBanner] = useState("");
+  const [socials, setSocials] = useState({
+    github: "https://github.com/misriyaa",
+    linkedin: "https://www.linkedin.com/in/nafeesathul-misriya-p/",
+    instagram: "#",
+  });
 
   useEffect(() => {
-    const fetchBanner = async () => {
+    let isMounted = true;
+    const fetchProfile = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKED_URL}/api/admin/banner`);
-        setBanner(res.data?.data?.banner || "");
+        const res = await api.get("/api/profile");
+        const profile = res.data?.data;
+        if (isMounted && profile) {
+          if (profile.banner) setBanner(profile.banner);
+          if (profile.socialLinks) {
+            setSocials((prev) => ({
+              ...prev,
+              ...profile.socialLinks,
+            }));
+          }
+        }
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching profile in About:", error);
       }
     };
-    fetchBanner();
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const getImageSrc = (imagePath) => {
+    if (!imagePath) return "";
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return imagePath;
+    }
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
   return (
     <section className="w-full bg-white overflow-hidden">
@@ -40,9 +67,7 @@ const About = () => {
           <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-full aspect-[4/5] bg-white overflow-hidden rounded-sm shadow-xl border border-gray-100">
             {banner ? (
               <img
-                src={banner.startsWith("http://") || banner.startsWith("https://")
-                  ? banner
-                  : `${import.meta.env.VITE_BACKED_URL}/uploads/${banner}`}
+                src={getImageSrc(banner)}
                 alt="Nafeesathul Misriya"
                 className="w-full h-full object-cover grayscale-[10%]"
               />
@@ -96,13 +121,31 @@ const About = () => {
           {/* Socials */}
           <div className="mt-8 sm:mt-10 md:mt-12 flex flex-wrap items-center gap-6 sm:gap-8">
             <div className="flex gap-5 sm:gap-6 text-zinc-900">
-              <a href="#" className="transition-colors hover:text-yellow-500" aria-label="GitHub">
+              <a
+                href={socials.github || "https://github.com/misriyaa"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-yellow-500"
+                aria-label="GitHub"
+              >
                 <FaGithub size={20} />
               </a>
-              <a href="#" className="transition-colors hover:text-yellow-500" aria-label="LinkedIn">
+              <a
+                href={socials.linkedin || "https://www.linkedin.com/in/nafeesathul-misriya-p/"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-yellow-500"
+                aria-label="LinkedIn"
+              >
                 <FaLinkedin size={20} />
               </a>
-              <a href="#" className="transition-colors hover:text-yellow-500" aria-label="Instagram">
+              <a
+                href={socials.instagram || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-yellow-500"
+                aria-label="Instagram"
+              >
                 <FaInstagram size={20} />
               </a>
             </div>

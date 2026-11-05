@@ -1,25 +1,45 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api, { API_BASE_URL } from "../config/api";
 
 const Project = () => {
   const [projects, setProjects] = useState([]);
-
-  // Note: Kept your variable name, but double check if it should be VITE_BACKEND_URL in your .env
-  const BASE_URL = import.meta.env.VITE_BACKED_URL;
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProjects = async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/api/admin/projects`);
-        setProjects(res.data.data || []);
-        console.log(res.data.data);
+        const res = await api.get("/api/admin/projects");
+        const projectList = Array.isArray(res.data?.data)
+          ? res.data.data
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+
+        if (isMounted) {
+          setProjects(projectList);
+        }
       } catch (err) {
-        console.log(err);
+        console.error("Error fetching projects:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProjects();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const getImageSrc = (imagePath) => {
+    if (!imagePath) return "";
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return imagePath;
+    }
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
   return (
     <section className="bg-white py-24 px-6 md:px-12 lg:px-16 overflow-hidden">
@@ -48,66 +68,74 @@ const Project = () => {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-          {projects.map((project, index) => (
-            <div key={project._id} className="group relative">
-              {/* Card */}
-              <div className="relative z-10">
-                {/* Image */}
-                <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
-                  <img
-                    src={project.image && (project.image.startsWith("http://") || project.image.startsWith("https://"))
-                      ? project.image
-                      : `${BASE_URL.replace(/\/$/, "")}/uploads/${project.image}`}
-                    alt={project.title}
-                    className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
-                  />
-                </div>
+        {loading ? (
+          <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
+            Loading Projects...
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="py-20 text-center text-gray-400 font-medium">
+            No projects added yet. Upload your featured projects via the admin dashboard.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+            {projects.map((project) => (
+              <div key={project._id} className="group relative">
+                {/* Card */}
+                <div className="relative z-10">
+                  {/* Image */}
+                  <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
+                    <img
+                      src={getImageSrc(project.image)}
+                      alt={project.title}
+                      className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
+                    />
+                  </div>
 
-                {/* Content */}
-                <div className="pt-8">
-                  {/* Small line */}
-                  <div className="w-10 h-[2px] bg-yellow-500 mb-5 group-hover:w-20 transition-all duration-500" />
+                  {/* Content */}
+                  <div className="pt-8">
+                    {/* Small line */}
+                    <div className="w-10 h-[2px] bg-yellow-500 mb-5 group-hover:w-20 transition-all duration-500" />
 
-                  {/* Title */}
-                  <h2 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] uppercase leading-none mb-4">
-                    {project.title}
-                  </h2>
+                    {/* Title */}
+                    <h2 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] uppercase leading-none mb-4">
+                      {project.title}
+                    </h2>
 
-                  {/* Description */}
-                  <p className="text-gray-500 text-sm md:text-[15px] leading-7 max-w-md mb-8 font-medium">
-                    {project.description}
-                  </p>
+                    {/* Description */}
+                    <p className="text-gray-500 text-sm md:text-[15px] leading-7 max-w-md mb-8 font-medium">
+                      {project.description}
+                    </p>
 
-                  {/* Buttons */}
-                  <div className="flex flex-wrap items-center gap-4">
-                    {project.liveLink && (
-                      <a
-                        href={project.liveLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#1a1a1a] text-white text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:bg-yellow-500 hover:text-black transition-all duration-300 font-bold"
-                      >
-                        View Live
-                      </a>
-                    )}
+                    {/* Buttons */}
+                    <div className="flex flex-wrap items-center gap-4">
+                      {project.liveLink && (
+                        <a
+                          href={project.liveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#1a1a1a] text-white text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:bg-yellow-500 hover:text-black transition-all duration-300 font-bold"
+                        >
+                          View Live
+                        </a>
+                      )}
 
-                    {project.githubLink && (
-                      <a
-                        href={project.githubLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="border border-gray-300 text-[#1a1a1a] text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:border-black transition-all duration-300 font-bold"
-                      >
-                        Github
-                      </a>
-                    )}
+                      {project.githubLink && (
+                        <a
+                          href={project.githubLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-gray-300 text-[#1a1a1a] text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:border-black transition-all duration-300 font-bold"
+                        >
+                          Github
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Bottom typography */}
         <div className="mt-24 overflow-hidden">

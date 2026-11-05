@@ -1,267 +1,995 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
+import api, { API_BASE_URL } from "../config/api";
 import { Formik, Form, Field, FieldArray } from "formik";
+import { Trash2, Edit3, Image as ImageIcon, Send, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("skills");
-  const tabs = ["skills", "projects", "profile"];
+  const tabs = ["skills", "projects", "profile", "contact", "messages"];
+
+  // Global feedback notification
+  const [notification, setNotification] = useState({ type: "", message: "" });
+
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => {
+      setNotification({ type: "", message: "" });
+    }, 5000);
+  };
+
+  // ================= SKILLS STATE =================
+  const [skillsList, setSkillsList] = useState([]);
+  const [loadingSkills, setLoadingSkills] = useState(false);
+  const [editingSkill, setEditingSkill] = useState(null); // When editing a category
+
+  const fetchSkills = async () => {
+    setLoadingSkills(true);
+    try {
+      const res = await api.get("/api/admin/skills");
+      const list = Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setSkillsList(list);
+    } catch (err) {
+      console.error("Failed to fetch skills:", err);
+      showNotification("error", "Failed to load skills from database.");
+    } finally {
+      setLoadingSkills(false);
+    }
+  };
+
+  const handleDeleteSkill = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete '${title}'?`)) return;
+    try {
+      const res = await api.delete(`/api/admin/skills/${id}`);
+      showNotification("success", res.data?.message || "Skill category deleted.");
+      setSkillsList((prev) => prev.filter((s) => s._id !== id));
+      if (editingSkill?._id === id) setEditingSkill(null);
+    } catch (err) {
+      console.error("Failed to delete skill:", err);
+      showNotification("error", err.response?.data?.message || "Failed to delete skill.");
+    }
+  };
+
+  // ================= PROJECTS STATE =================
+  const [projectsList, setProjectsList] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const res = await api.get("/api/admin/projects");
+      const list = Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setProjectsList(list);
+    } catch (err) {
+      console.error("Failed to fetch projects:", err);
+      showNotification("error", "Failed to load projects from database.");
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  const handleDeleteProject = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete '${title}'?`)) return;
+    try {
+      const res = await api.delete(`/api/admin/projects/${id}`);
+      showNotification("success", res.data?.message || "Project deleted successfully.");
+      setProjectsList((prev) => prev.filter((p) => p._id !== id));
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      showNotification("error", err.response?.data?.message || "Failed to delete project.");
+    }
+  };
+
+  // ================= PROFILE & BANNER STATE =================
+  const [currentProfile, setCurrentProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  const fetchProfile = async () => {
+    setLoadingProfile(true);
+    try {
+      const res = await api.get("/api/profile");
+      if (res.data?.data) {
+        setCurrentProfile(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+      showNotification("error", "Failed to load profile details.");
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // ================= VISITOR MESSAGES STATE =================
+  const [messagesList, setMessagesList] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
+  const fetchMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const res = await api.get("/api/admin/messages");
+      const list = Array.isArray(res.data?.data) ? res.data.data : [];
+      setMessagesList(list);
+    } catch (err) {
+      console.error("Failed to fetch messages:", err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleDeleteMessage = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this enquiry?")) return;
+    try {
+      const res = await api.delete(`/api/admin/messages/${id}`);
+      showNotification("success", res.data?.message || "Message deleted.");
+      setMessagesList((prev) => prev.filter((m) => m._id !== id));
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+      showNotification("error", "Failed to delete message.");
+    }
+  };
+
+  // Fetch initial content when tab switches
+  useEffect(() => {
+    let active = true;
+
+    const loadData = async () => {
+      try {
+        if (activeTab === "skills") {
+          const res = await api.get("/api/admin/skills");
+          const list = Array.isArray(res.data?.data)
+            ? res.data.data
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          if (active) setSkillsList(list);
+        } else if (activeTab === "projects") {
+          const res = await api.get("/api/admin/projects");
+          const list = Array.isArray(res.data?.data)
+            ? res.data.data
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          if (active) setProjectsList(list);
+        } else if (activeTab === "profile" || activeTab === "contact") {
+          const res = await api.get("/api/profile");
+          if (active && res.data?.data) {
+            setCurrentProfile(res.data.data);
+          }
+        } else if (activeTab === "messages") {
+          const res = await api.get("/api/admin/messages");
+          const list = Array.isArray(res.data?.data) ? res.data.data : [];
+          if (active) setMessagesList(list);
+        }
+      } catch (err) {
+        console.error("Error fetching data for tab:", activeTab, err);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab]);
+
+  const getImageSrc = (imagePath) => {
+    if (!imagePath) return "";
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return imagePath;
+    }
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 p-6 flex justify-center">
-      <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-md">
-        <h1 className="text-3xl font-bold text-center mb-8">Admin Dashboard</h1>
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 sm:p-6 md:p-8 flex justify-center font-sans">
+      <div className="w-full max-w-4xl bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-md border border-gray-100">
+        
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Admin Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage permanent content stored in MongoDB & Cloudinary</p>
+          </div>
+          <a
+            href="/"
+            className="text-xs uppercase tracking-widest font-bold px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+          >
+            ← View Portfolio
+          </a>
+        </div>
+
+        {/* Global Notification */}
+        {notification.message && (
+          <div
+            className={`mb-6 p-4 rounded-xl flex items-center justify-between text-sm font-semibold transition-all ${
+              notification.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {notification.type === "success" ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+              <span>{notification.message}</span>
+            </div>
+            <button
+              onClick={() => setNotification({ type: "", message: "" })}
+              className="text-gray-400 hover:text-gray-700"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         {/* ===== Tabs ===== */}
-        <div className="mb-8">
-          <div className="flex justify-center gap-10 border-b border-gray-200 pb-2">
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex gap-6 sm:gap-10 border-b border-gray-200 pb-2 whitespace-nowrap min-w-full">
             {tabs.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative text-lg capitalize transition ${
+                onClick={() => {
+                  setActiveTab(tab);
+                  setEditingSkill(null);
+                }}
+                className={`relative text-base sm:text-lg capitalize font-medium transition py-1 ${
                   activeTab === tab
-                    ? "text-blue-600"
+                    ? "text-blue-600 font-bold"
                     : "text-gray-400 hover:text-gray-700"
                 }`}
               >
-                {tab}
+                {tab === "profile" ? "Banner" : tab}
                 {activeTab === tab && (
-                  <span className="absolute left-0 -bottom-[6px] w-full h-[2px] bg-blue-600 rounded-full"></span>
+                  <span className="absolute left-0 -bottom-[10px] w-full h-[2.5px] bg-blue-600 rounded-full"></span>
                 )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* ================= SKILLS ================= */}
+        {/* ================= SKILLS TAB ================= */}
         {activeTab === "skills" && (
-          <Formik
-            initialValues={{ title: "", skills: [""] }}
-            onSubmit={async (values, { resetForm }) => {
-              const data = {
-                title: values.title,
-                skills: values.skills.filter((s) => s.trim() !== ""),
-              };
+          <div className="space-y-10">
+            {/* Form */}
+            <div className="bg-gray-50/70 p-6 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">
+                  {editingSkill ? `Edit Category: ${editingSkill.title}` : "Add New Skill Category"}
+                </h2>
+                {editingSkill && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingSkill(null)}
+                    className="text-xs text-gray-500 hover:text-gray-800 underline"
+                  >
+                    Cancel Editing
+                  </button>
+                )}
+              </div>
 
-              try {
-                const res = await axios.post(
-                  `${import.meta.env.VITE_BACKED_URL}/api/admin`,
-                  data,
-                );
-                console.log(res.data);
-                resetForm();
-              } catch (error) {
-                console.error(error.response?.data || error.message);
-              }
-            }}
-          >
-            {({ values }) => (
-              <Form className="space-y-4">
-                <Field
-                  name="title"
-                  placeholder="Category (Frontend)"
-                  className="w-full p-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <Formik
+                enableReinitialize
+                initialValues={{
+                  title: editingSkill ? editingSkill.title : "",
+                  skills: editingSkill ? editingSkill.skills : [""],
+                }}
+                onSubmit={async (values, { resetForm, setSubmitting }) => {
+                  const data = {
+                    title: values.title,
+                    skills: values.skills.filter((s) => s.trim() !== ""),
+                  };
 
-                <FieldArray name="skills">
-                  {({ push, remove }) => (
-                    <div className="space-y-3">
-                      {values.skills.map((_, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Field
-                            name={`skills.${index}`}
-                            placeholder={`Skill ${index + 1}`}
-                            className="w-full p-3 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+                  if (!data.title.trim() || data.skills.length === 0) {
+                    showNotification("error", "Category title and at least one skill are required.");
+                    setSubmitting(false);
+                    return;
+                  }
 
-                          {values.skills.length > 1 && (
+                  try {
+                    if (editingSkill) {
+                      const res = await api.put(`/api/admin/skills/${editingSkill._id}`, data);
+                      showNotification("success", res.data?.message || "Skill category updated!");
+                      setEditingSkill(null);
+                    } else {
+                      const res = await api.post("/api/admin/skills", data);
+                      showNotification("success", res.data?.message || "Skill category saved to MongoDB!");
+                    }
+                    resetForm();
+                    fetchSkills();
+                  } catch (error) {
+                    console.error("Save skill error:", error);
+                    showNotification("error", error.response?.data?.message || "Failed to save skill.");
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+              >
+                {({ values, isSubmitting }) => (
+                  <Form className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                        Category Title
+                      </label>
+                      <Field
+                        name="title"
+                        placeholder="e.g. Frontend, Backend, Database"
+                        className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                        Skills
+                      </label>
+                      <FieldArray name="skills">
+                        {({ push, remove }) => (
+                          <div className="space-y-3">
+                            {values.skills.map((_, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Field
+                                  name={`skills.${index}`}
+                                  placeholder={`Skill name (e.g. React.js)`}
+                                  className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                />
+
+                                {values.skills.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => remove(index)}
+                                    className="px-3 bg-red-100 hover:bg-red-200 text-red-600 font-bold rounded-lg transition"
+                                    title="Remove this skill"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+
                             <button
                               type="button"
-                              onClick={() => remove(index)}
-                              className="px-3 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => push("")}
+                              className="text-xs font-bold bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition"
                             >
-                              X
+                              + Add Another Skill
                             </button>
+                          </div>
+                        )}
+                      </FieldArray>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
+                    >
+                      {isSubmitting
+                        ? "Saving to Database..."
+                        : editingSkill
+                        ? "Update Skill Category"
+                        : "Save Skill Category"}
+                    </button>
+                  </Form>
+                )}
+              </Formik>
+            </div>
+
+            {/* Existing Skills List */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 uppercase tracking-wider">
+                  Saved Categories ({skillsList.length})
+                </h3>
+                <button
+                  onClick={fetchSkills}
+                  disabled={loadingSkills}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 font-semibold"
+                >
+                  <RefreshCw size={12} className={loadingSkills ? "animate-spin" : ""} /> Refresh
+                </button>
+              </div>
+
+              {loadingSkills ? (
+                <div className="p-8 text-center text-sm text-gray-400">Loading saved skills...</div>
+              ) : skillsList.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No skills in database yet. Add your first category above!
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {skillsList.map((cat) => (
+                    <div
+                      key={cat._id}
+                      className="p-4 bg-white border border-gray-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-gray-300 transition"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 text-base">{cat.title}</span>
+                          <span className="text-xs text-gray-400 font-mono">
+                            ({cat.skills?.length || 0} skills)
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(cat.skills || []).map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md font-medium"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          onClick={() => {
+                            setEditingSkill(cat);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                          title="Edit Category"
+                        >
+                          <Edit3 size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSkill(cat._id, cat.title)}
+                          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                          title="Delete Category"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= PROJECTS TAB ================= */}
+        {activeTab === "projects" && (
+          <div className="space-y-10">
+            {/* Form */}
+            <div className="bg-gray-50/70 p-6 rounded-xl border border-gray-200">
+              <h2 className="text-lg font-bold mb-4">Add New Project</h2>
+
+              <Formik
+                initialValues={{
+                  title: "",
+                  description: "",
+                  liveLink: "",
+                  githubLink: "",
+                  image: null,
+                }}
+                onSubmit={async (values, { resetForm, setSubmitting }) => {
+                  if (!values.title.trim()) {
+                    showNotification("error", "Project title is required.");
+                    setSubmitting(false);
+                    return;
+                  }
+
+                  if (!values.image) {
+                    showNotification("error", "Please select a project screenshot/image.");
+                    setSubmitting(false);
+                    return;
+                  }
+
+                  try {
+                    const formData = new FormData();
+                    formData.append("title", values.title.trim());
+                    formData.append("description", values.description.trim());
+                    formData.append("liveLink", values.liveLink.trim());
+                    formData.append("githubLink", values.githubLink.trim());
+                    formData.append("image", values.image);
+
+                    const res = await api.post("/api/admin/projects", formData, {
+                      headers: { "Content-Type": "multipart/form-data" },
+                    });
+
+                    showNotification(
+                      "success",
+                      res.data?.message || "Project uploaded to Cloudinary & saved in MongoDB!"
+                    );
+
+                    resetForm();
+                    fetchProjects();
+                  } catch (error) {
+                    console.error("Project submit error:", error);
+                    showNotification(
+                      "error",
+                      error.response?.data?.message || "Failed to create project."
+                    );
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+              >
+                {({ setFieldValue, values, isSubmitting }) => (
+                  <Form className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                        Project Title *
+                      </label>
+                      <Field
+                        name="title"
+                        placeholder="e.g. QuickShow Movie Booking"
+                        className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                        Description
+                      </label>
+                      <Field
+                        as="textarea"
+                        name="description"
+                        rows={3}
+                        placeholder="Brief overview of features, tech stack..."
+                        className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                          Live Demo URL
+                        </label>
+                        <Field
+                          name="liveLink"
+                          placeholder="https://example.com"
+                          className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                          GitHub Repository URL
+                        </label>
+                        <Field
+                          name="githubLink"
+                          placeholder="https://github.com/..."
+                          className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                        Project Image * (Uploads permanently to Cloudinary)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        onChange={(e) => setFieldValue("image", e.target.files[0])}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                      />
+                    </div>
+
+                    {values.image && (
+                      <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-2">
+                        <span className="text-xs text-gray-500 font-medium">Selected Preview:</span>
+                        <img
+                          src={URL.createObjectURL(values.image)}
+                          alt="preview"
+                          className="w-full h-44 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Uploading Image to Cloudinary & Saving..." : "Submit Project"}
+                    </button>
+                  </Form>
+                )}
+              </Formik>
+            </div>
+
+            {/* Existing Projects List */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 uppercase tracking-wider">
+                  Saved Projects ({projectsList.length})
+                </h3>
+                <button
+                  onClick={fetchProjects}
+                  disabled={loadingProjects}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 font-semibold"
+                >
+                  <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} /> Refresh
+                </button>
+              </div>
+
+              {loadingProjects ? (
+                <div className="p-8 text-center text-sm text-gray-400">Loading saved projects...</div>
+              ) : projectsList.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No projects in database yet. Add your first project above!
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {projectsList.map((proj) => (
+                    <div
+                      key={proj._id}
+                      className="p-4 bg-white border border-gray-200 rounded-xl flex flex-col justify-between hover:border-gray-300 transition"
+                    >
+                      <div className="space-y-3">
+                        <div className="h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-100">
+                          <img
+                            src={getImageSrc(proj.image)}
+                            alt={proj.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <h4 className="font-bold text-gray-900 text-base">{proj.title}</h4>
+                        <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed">
+                          {proj.description || "No description provided."}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">
+                        <div className="flex gap-2 text-xs">
+                          {proj.liveLink && (
+                            <a
+                              href={proj.liveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 hover:underline font-semibold"
+                            >
+                              Live ↗
+                            </a>
+                          )}
+                          {proj.githubLink && (
+                            <a
+                              href={proj.githubLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-gray-600 hover:underline font-semibold"
+                            >
+                              Code ↗
+                            </a>
                           )}
                         </div>
-                      ))}
 
-                      <button
-                        type="button"
-                        onClick={() => push("")}
-                        className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
-                      >
-                        + Add Skill
-                      </button>
+                        <button
+                          onClick={() => handleDeleteProject(proj._id, proj.title)}
+                          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                          title="Delete Project"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </FieldArray>
-
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">
-                  Submit Skills
-                </button>
-              </Form>
-            )}
-          </Formik>
-        )}
-
-        {/* ================= PROJECTS ================= */}
-        {activeTab === "projects" && (
-  <Formik
-  initialValues={{
-    title: "",
-    description: "",
-    liveLink: "",
-    githubLink: "",
-    image: null,
-  }}
-  onSubmit={async (values, { resetForm }) => {
-    if (!values.image) {
-      alert("Please upload image");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("title", values.title);
-      formData.append("description", values.description);
-      formData.append("liveLink", values.liveLink);
-      formData.append("githubLink", values.githubLink);
-      formData.append("image", values.image);
-
-      const res = await axios.post(
-        `${import.meta.env.VITE_BACKED_URL}/api/admin/projects`,
-        formData
-      );
-
-      console.log("SUCCESS:", res.data);
-      alert("Project Added ✅");
-
-      resetForm();
-
-    } catch (error) {
-      console.log("ERROR:", error.response?.data);
-    }
-  }}
->
-  {({ setFieldValue, values }) => (
-    <Form className="space-y-4">
-
-      <Field
-        name="title"
-        placeholder="Project Title"
-        className="w-full p-3 bg-gray-100 rounded-lg"
-      />
-
-      <Field
-        name="description"
-        placeholder="Description"
-        className="w-full p-3 bg-gray-100 rounded-lg"
-      />
-
-      <Field
-        name="liveLink"
-        placeholder="Live Demo URL"
-        className="w-full p-3 bg-gray-100 rounded-lg"
-      />
-
-      <Field
-        name="githubLink"
-        placeholder="GitHub URL"
-        className="w-full p-3 bg-gray-100 rounded-lg"
-      />
-
-      <input
-        type="file"
-        onChange={(e) =>
-          setFieldValue("image", e.target.files[0])
-        }
-      />
-
-      {values.image && (
-        <img
-          src={URL.createObjectURL(values.image)}
-          alt="preview"
-          className="w-full h-44 object-cover rounded-lg"
-        />
-      )}
-
-      <button className="w-full bg-blue-600 text-white py-3 rounded-lg">
-        Submit Project
-      </button>
-
-    </Form>
-  )}
-</Formik>
-        )}
-
-        {/* ================= PROFILE ================= */}
-        {activeTab === "profile" && (
-          <Formik
-            initialValues={{ banner: null }}
-            onSubmit={async (values, { resetForm }) => {
-              try {
-                const formData = new FormData();
-                formData.append("banner", values.banner);
-
-                const res = await axios.post(
-                  `${import.meta.env.VITE_BACKED_URL}/api/admin/banner`,
-                  formData,
-                );
-
-                console.log(res.data);
-                resetForm();
-              } catch (error) {
-                console.error(error.response?.data || error.message);
-              }
-            }}
-          >
-            {({ setFieldValue, values }) => (
-              <Form className="space-y-4">
-                <h2 className="text-lg font-semibold">Upload Banner Image</h2>
-
-                {/* 🔥 Styled File Upload */}
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    id="bannerUpload"
-                    className="hidden"
-                    onChange={(e) => setFieldValue("banner", e.target.files[0])}
-                  />
-
-                  <label
-                    htmlFor="bannerUpload"
-                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
-                  >
-                    <span className="text-gray-500">
-                      Click to upload banner image
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      Recommended: Wide image
-                    </span>
-                  </label>
+                  ))}
                 </div>
+              )}
+            </div>
+          </div>
+        )}
 
-                {values.banner && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
-                      {values.banner.name}
-                    </p>
+        {/* ================= PROFILE / BANNER TAB ================= */}
+        {activeTab === "profile" && (
+          <div className="space-y-8">
+            {/* Active Banner Display */}
+            <div className="bg-gray-50/70 p-6 rounded-xl border border-gray-200">
+              <h2 className="text-lg font-bold mb-3">Active Portfolio Banner</h2>
+              {loadingProfile ? (
+                <div className="py-6 text-center text-sm text-gray-400">Loading current banner...</div>
+              ) : currentProfile?.banner ? (
+                <div className="space-y-3">
+                  <div className="h-56 bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                     <img
-                      src={URL.createObjectURL(values.banner)}
-                      alt="banner preview"
-                      className="w-full h-48 object-cover rounded-lg border"
+                      src={getImageSrc(currentProfile.banner)}
+                      alt="Active Banner"
+                      className="w-full h-full object-cover object-top"
                     />
                   </div>
-                )}
+                  <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2 border border-emerald-200">
+                    <CheckCircle size={14} />
+                    <span>Permanent Cloudinary HTTPS URL stored in MongoDB.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-sm text-gray-400 bg-white rounded-lg border border-dashed border-gray-200">
+                  No active banner found in database. Upload one below!
+                </div>
+              )}
+            </div>
 
-                <button className="w-full bg-blue-600 text-white py-3 rounded-lg">
-                  Upload Banner
-                </button>
-              </Form>
-            )}
-          </Formik>
+            {/* Banner Upload Form */}
+            <div className="bg-gray-50/70 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-base font-bold mb-4">Upload New Banner</h3>
+
+              <Formik
+                initialValues={{ banner: null }}
+                onSubmit={async (values, { resetForm, setSubmitting }) => {
+                  if (!values.banner) {
+                    showNotification("error", "Please select an image file to upload.");
+                    setSubmitting(false);
+                    return;
+                  }
+
+                  try {
+                    const formData = new FormData();
+                    formData.append("banner", values.banner);
+
+                    const res = await api.post("/api/admin/banner", formData, {
+                      headers: { "Content-Type": "multipart/form-data" },
+                    });
+
+                    showNotification(
+                      "success",
+                      res.data?.message || "Banner permanently uploaded to Cloudinary!"
+                    );
+
+                    resetForm();
+                    fetchProfile();
+                  } catch (error) {
+                    console.error("Banner upload error:", error);
+                    showNotification(
+                      "error",
+                      error.response?.data?.message || "Failed to upload banner."
+                    );
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+              >
+                {({ setFieldValue, values, isSubmitting }) => (
+                  <Form className="space-y-4">
+                    <div className="space-y-3">
+                      <input
+                        type="file"
+                        id="bannerUpload"
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        className="hidden"
+                        onChange={(e) => setFieldValue("banner", e.target.files[0])}
+                      />
+
+                      <label
+                        htmlFor="bannerUpload"
+                        className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 bg-white transition"
+                      >
+                        <ImageIcon size={32} className="text-gray-400 mb-2" />
+                        <span className="text-sm font-semibold text-gray-600">
+                          Click to select a new banner image
+                        </span>
+                        <span className="text-xs text-gray-400 mt-1">
+                          PNG, JPG, or WEBP (Saved permanently to Cloudinary)
+                        </span>
+                      </label>
+                    </div>
+
+                    {values.banner && (
+                      <div className="space-y-2 p-3 bg-white border border-gray-200 rounded-xl">
+                        <p className="text-xs text-gray-600 font-semibold">
+                          Selected File: {values.banner.name}
+                        </p>
+                        <img
+                          src={URL.createObjectURL(values.banner)}
+                          alt="banner preview"
+                          className="w-full h-48 object-cover rounded-lg border border-gray-100"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !values.banner}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Uploading to Cloudinary & Saving..." : "Upload & Replace Banner"}
+                    </button>
+                  </Form>
+                )}
+              </Formik>
+            </div>
+          </div>
         )}
+
+        {/* ================= CONTACT DETAILS TAB ================= */}
+        {activeTab === "contact" && (
+          <div className="space-y-8">
+            <div className="bg-gray-50/70 p-6 rounded-xl border border-gray-200">
+              <h2 className="text-lg font-bold mb-1">Portfolio Contact Information</h2>
+              <p className="text-xs text-gray-500 mb-6">
+                Update your contact details shown on the public Contact page and Footer.
+              </p>
+
+              <Formik
+                enableReinitialize
+                initialValues={{
+                  email: currentProfile?.email || "misriya8784@gmail.com",
+                  phone: currentProfile?.phone || "+91 8714945730",
+                  location: currentProfile?.location || "Kerala, India",
+                  github: currentProfile?.socialLinks?.github || "https://github.com/misriyaa",
+                  linkedin: currentProfile?.socialLinks?.linkedin || "https://www.linkedin.com/in/nafeesathul-misriya-p/",
+                  instagram: currentProfile?.socialLinks?.instagram || "#",
+                }}
+                onSubmit={async (values, { setSubmitting }) => {
+                  try {
+                    const payload = {
+                      email: values.email,
+                      phone: values.phone,
+                      location: values.location,
+                      socialLinks: {
+                        github: values.github,
+                        linkedin: values.linkedin,
+                        instagram: values.instagram,
+                      },
+                    };
+
+                    const res = await api.put("/api/admin/profile", payload);
+                    showNotification("success", res.data?.message || "Contact details updated!");
+                    fetchProfile();
+                  } catch (err) {
+                    console.error("Failed to update contact info:", err);
+                    showNotification("error", "Failed to update contact information.");
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+              >
+                {({ isSubmitting }) => (
+                  <Form className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                          Email Address
+                        </label>
+                        <Field
+                          type="email"
+                          name="email"
+                          className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                          Phone Number
+                        </label>
+                        <Field
+                          name="phone"
+                          className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                        Location / Based In
+                      </label>
+                      <Field
+                        name="location"
+                        className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-200">
+                      <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">
+                        Social Profile Links
+                      </h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">GitHub URL</label>
+                          <Field
+                            name="github"
+                            className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">LinkedIn URL</label>
+                          <Field
+                            name="linkedin"
+                            className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Instagram URL</label>
+                          <Field
+                            name="instagram"
+                            className="w-full p-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Saving Contact Details..." : "Save Contact Information"}
+                    </button>
+                  </Form>
+                )}
+              </Formik>
+            </div>
+          </div>
+        )}
+
+        {/* ================= VISITOR ENQUIRIES TAB ================= */}
+        {activeTab === "messages" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold">Visitor Contact Enquiries</h2>
+                <p className="text-xs text-gray-500">Messages sent via public Contact form ({messagesList.length})</p>
+              </div>
+              <button
+                onClick={fetchMessages}
+                disabled={loadingMessages}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 font-semibold"
+              >
+                <RefreshCw size={12} className={loadingMessages ? "animate-spin" : ""} /> Refresh
+              </button>
+            </div>
+
+            {loadingMessages ? (
+              <div className="py-8 text-center text-sm text-gray-400">Loading enquiries...</div>
+            ) : messagesList.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                No visitor enquiries received yet. Form submissions on the Contact page will appear here.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messagesList.map((msg) => (
+                  <div
+                    key={msg._id}
+                    className="p-5 bg-white border border-gray-200 rounded-xl space-y-3 hover:border-gray-300 transition"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-base">{msg.name}</h4>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                          <a href={`mailto:${msg.email}`} className="text-blue-600 hover:underline">
+                            {msg.email}
+                          </a>
+                          {msg.service && (
+                            <>
+                              <span>•</span>
+                              <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                                {msg.service}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] text-gray-400 font-mono">
+                          {new Date(msg.createdAt).toLocaleDateString()}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteMessage(msg._id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Delete message"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg leading-relaxed whitespace-pre-wrap">
+                      {msg.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );
