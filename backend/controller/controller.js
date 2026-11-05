@@ -249,16 +249,19 @@ export const addSkill = async (req, res) => {
   try {
     const { title, skills } = req.body;
 
-    if (!title || !title.trim()) {
+    if (!title || !String(title).trim()) {
       return res.status(400).json({
         success: false,
         message: "Skill category title is required",
       });
     }
 
-    const cleanedSkills = Array.isArray(skills)
-      ? skills.map((s) => s.trim()).filter(Boolean)
-      : [];
+    let cleanedSkills = [];
+    if (Array.isArray(skills)) {
+      cleanedSkills = skills.map((s) => String(s).trim()).filter(Boolean);
+    } else if (typeof skills === "string") {
+      cleanedSkills = skills.split(",").map((s) => s.trim()).filter(Boolean);
+    }
 
     if (cleanedSkills.length === 0) {
       return res.status(400).json({
@@ -267,9 +270,13 @@ export const addSkill = async (req, res) => {
       });
     }
 
+    const trimmedTitle = String(title).trim();
+    // Escape regex characters to prevent pattern compile errors
+    const escapedTitle = trimmedTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     // Check if category already exists (case-insensitive) to prevent accidental duplicate entries
     const existingCategory = await Skill.findOne({
-      title: { $regex: new RegExp(`^${title.trim()}$`, "i") },
+      title: { $regex: new RegExp(`^${escapedTitle}$`, "i") },
     });
 
     if (existingCategory) {
@@ -286,7 +293,7 @@ export const addSkill = async (req, res) => {
     }
 
     const newSkill = await Skill.create({
-      title: title.trim(),
+      title: trimmedTitle,
       skills: cleanedSkills,
     });
 
@@ -296,7 +303,28 @@ export const addSkill = async (req, res) => {
       data: newSkill,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in addSkill:", error);
+    if (error.code === 11000) {
+      try {
+        const cat = await Skill.findOne({ title: req.body?.title?.trim() });
+        if (cat) {
+          const reqSkills = Array.isArray(req.body.skills)
+            ? req.body.skills.map((s) => String(s).trim()).filter(Boolean)
+            : [];
+          const merged = new Set([...cat.skills, ...reqSkills]);
+          cat.skills = Array.from(merged);
+          await cat.save();
+          return res.status(200).json({
+            success: true,
+            message: `Updated existing category '${cat.title}' with new skills`,
+            data: cat,
+          });
+        }
+      } catch (innerErr) {
+        console.warn("Could not merge duplicate skill category:", innerErr.message);
+      }
+    }
+    res.status(500).json({ success: false, message: error.message || "Failed to save skill" });
   }
 };
 
@@ -308,6 +336,7 @@ export const getSkills = async (req, res) => {
       data: skills,
     });
   } catch (error) {
+    console.error("Error in getSkills:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -317,9 +346,12 @@ export const updateSkill = async (req, res) => {
     const { id } = req.params;
     const { title, skills } = req.body;
 
-    const cleanedSkills = Array.isArray(skills)
-      ? skills.map((s) => s.trim()).filter(Boolean)
-      : [];
+    let cleanedSkills = [];
+    if (Array.isArray(skills)) {
+      cleanedSkills = skills.map((s) => String(s).trim()).filter(Boolean);
+    } else if (typeof skills === "string") {
+      cleanedSkills = skills.split(",").map((s) => s.trim()).filter(Boolean);
+    }
 
     const skill = await Skill.findById(id);
     if (!skill) {
@@ -329,7 +361,7 @@ export const updateSkill = async (req, res) => {
       });
     }
 
-    if (title && title.trim()) skill.title = title.trim();
+    if (title && String(title).trim()) skill.title = String(title).trim();
     if (cleanedSkills.length > 0) skill.skills = cleanedSkills;
 
     await skill.save();
@@ -340,6 +372,7 @@ export const updateSkill = async (req, res) => {
       data: skill,
     });
   } catch (error) {
+    console.error("Error in updateSkill:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

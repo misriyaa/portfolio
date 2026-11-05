@@ -86,13 +86,15 @@ app.put("/api/admin/profile", updateProfile);
 app.get("/api/admin/banner", getBanner);
 app.post("/api/admin/banner", upload.single("banner"), uploadBanner);
 
-// Skills Routes
+// Skills Routes - Supported under both /api/admin and /api/admin/skills
 app.get("/api/admin", getSkills);
 app.get("/api/admin/skills", getSkills);
 app.post("/api/admin", addSkill);
 app.post("/api/admin/skills", addSkill);
 app.put("/api/admin/skills/:id", updateSkill);
+app.put("/api/admin/:id", updateSkill);
 app.delete("/api/admin/skills/:id", deleteSkill);
+app.delete("/api/admin/:id", deleteSkill);
 
 // Projects Routes
 app.get("/api/admin/projects", getProjects);
@@ -118,23 +120,32 @@ app.use((err, req, res, next) => {
 // Database Connection & Server Startup
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
+const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URL) {
-      throw new Error("MONGODB_URL environment variable is missing!");
+      console.error("MONGODB_URL environment variable is missing!");
+      return;
     }
 
     console.log("Connecting to MongoDB Atlas...");
-    await mongoose.connect(process.env.MONGODB_URL);
-    console.log("MongoDB connected successfully");
-
-    app.listen(PORT, () => {
-      console.log(`Server running and accepting requests on http://localhost:${PORT}`);
+    await mongoose.connect(process.env.MONGODB_URL, {
+      serverSelectionTimeoutMS: 15000,
     });
+    console.log("MongoDB connected successfully");
   } catch (err) {
-    console.error("Critical: Failed to connect to MongoDB:", err.message);
-    process.exit(1);
+    console.error("MongoDB Connection Warning:", err.message);
   }
 };
 
-startServer();
+mongoose.connection.on("disconnected", () => {
+  console.warn("MongoDB disconnected. Attempting reconnection...");
+});
+
+mongoose.connection.on("reconnected", () => {
+  console.log("MongoDB reconnected successfully");
+});
+
+app.listen(PORT, async () => {
+  console.log(`Server running and accepting requests on http://localhost:${PORT}`);
+  await connectDB();
+});

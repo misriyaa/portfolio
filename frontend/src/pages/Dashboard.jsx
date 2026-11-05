@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api, { resolveImageUrl } from "../config/api";
+import api, { resolveImageUrl, API_BASE_URL } from "../config/api";
 import { Formik, Form, Field, FieldArray } from "formik";
 import { Trash2, Edit3, Image as ImageIcon, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
 
@@ -25,7 +25,16 @@ const Dashboard = () => {
   const fetchSkills = async () => {
     setLoadingSkills(true);
     try {
-      const res = await api.get("/api/admin/skills");
+      let res;
+      try {
+        res = await api.get("/api/admin");
+      } catch (err1) {
+        if (err1.response?.status === 404) {
+          res = await api.get("/api/admin/skills");
+        } else {
+          throw err1;
+        }
+      }
       const list = Array.isArray(res.data?.data)
         ? res.data.data
         : Array.isArray(res.data)
@@ -34,7 +43,8 @@ const Dashboard = () => {
       setSkillsList(list);
     } catch (err) {
       console.error("Failed to fetch skills:", err);
-      showNotification("error", "Failed to load skills from database.");
+      const msg = err.response?.data?.message || (err.code === "ERR_NETWORK" ? "Cannot connect to backend server." : "Failed to load skills from database.");
+      showNotification("error", msg);
     } finally {
       setLoadingSkills(false);
     }
@@ -43,7 +53,16 @@ const Dashboard = () => {
   const handleDeleteSkill = async (id, title) => {
     if (!window.confirm(`Are you sure you want to delete '${title}'?`)) return;
     try {
-      const res = await api.delete(`/api/admin/skills/${id}`);
+      let res;
+      try {
+        res = await api.delete(`/api/admin/skills/${id}`);
+      } catch (delErr) {
+        if (delErr.response?.status === 404) {
+          res = await api.delete(`/api/admin/${id}`);
+        } else {
+          throw delErr;
+        }
+      }
       showNotification("success", res.data?.message || "Skill category deleted.");
       setSkillsList((prev) => prev.filter((s) => s._id !== id));
       if (editingSkill?._id === id) setEditingSkill(null);
@@ -142,7 +161,16 @@ const Dashboard = () => {
     const loadData = async () => {
       try {
         if (activeTab === "skills") {
-          const res = await api.get("/api/admin/skills");
+          let res;
+          try {
+            res = await api.get("/api/admin");
+          } catch (e1) {
+            if (e1.response?.status === 404) {
+              res = await api.get("/api/admin/skills");
+            } else {
+              throw e1;
+            }
+          }
           const list = Array.isArray(res.data?.data)
             ? res.data.data
             : Array.isArray(res.data)
@@ -272,30 +300,58 @@ const Dashboard = () => {
                 }}
                 onSubmit={async (values, { resetForm, setSubmitting }) => {
                   const data = {
-                    title: values.title,
-                    skills: values.skills.filter((s) => s.trim() !== ""),
+                    title: values.title?.trim(),
+                    skills: (values.skills || []).map((s) => String(s).trim()).filter(Boolean),
                   };
 
-                  if (!data.title.trim() || data.skills.length === 0) {
+                  if (!data.title || data.skills.length === 0) {
                     showNotification("error", "Category title and at least one skill are required.");
                     setSubmitting(false);
                     return;
                   }
 
                   try {
+                    let res;
                     if (editingSkill) {
-                      const res = await api.put(`/api/admin/skills/${editingSkill._id}`, data);
+                      try {
+                        res = await api.put(`/api/admin/skills/${editingSkill._id}`, data);
+                      } catch (err1) {
+                        if (err1.response?.status === 404) {
+                          res = await api.put(`/api/admin/${editingSkill._id}`, data);
+                        } else {
+                          throw err1;
+                        }
+                      }
                       showNotification("success", res.data?.message || "Skill category updated!");
                       setEditingSkill(null);
                     } else {
-                      const res = await api.post("/api/admin/skills", data);
+                      try {
+                        res = await api.post("/api/admin", data);
+                      } catch (err1) {
+                        if (err1.response?.status === 404) {
+                          res = await api.post("/api/admin/skills", data);
+                        } else {
+                          throw err1;
+                        }
+                      }
                       showNotification("success", res.data?.message || "Skill category saved to MongoDB!");
                     }
                     resetForm();
                     fetchSkills();
                   } catch (error) {
                     console.error("Save skill error:", error);
-                    showNotification("error", error.response?.data?.message || "Failed to save skill.");
+                    const serverMsg = error.response?.data?.message;
+                    let displayMsg = serverMsg;
+                    if (!displayMsg) {
+                      if (!error.response || error.code === "ERR_NETWORK") {
+                        displayMsg = `Cannot connect to backend server (${API_BASE_URL}). Please verify that your backend is running ('npm run dev' on port 5000).`;
+                      } else if (error.response?.status === 404) {
+                        displayMsg = "Save skill API route not found (404). Please ensure the backend server is running.";
+                      } else {
+                        displayMsg = error.message || "Failed to save skill.";
+                      }
+                    }
+                    showNotification("error", displayMsg);
                   } finally {
                     setSubmitting(false);
                   }
