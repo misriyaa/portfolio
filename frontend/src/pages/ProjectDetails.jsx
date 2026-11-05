@@ -222,15 +222,7 @@ const ProjectDetails = () => {
             </div>
 
             {/* Meta Info Pill Card */}
-            <div className="bg-white p-6 rounded-[28px] border border-slate-200/80 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                <Sparkles size={14} className="text-yellow-500" />
-                <span>Production Portfolio Feature</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Permanently persisted in MongoDB Atlas with media optimization via Cloudinary.
-              </p>
-            </div>
+        
 
           </div>
 

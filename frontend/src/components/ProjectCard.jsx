@@ -64,7 +64,7 @@ const ProjectCard = ({ project, index = 0 }) => {
             {/* The Signature White Tab with Number */}
             <div className="bg-white pt-2.5 sm:pt-3 pb-0 pl-3.5 sm:pl-4 pr-3.5 sm:pr-4 rounded-tl-[18px] sm:rounded-tl-[20px] flex items-baseline gap-1.5 select-none">
               <span className="text-[11px] sm:text-xs font-semibold text-slate-400 lowercase tracking-normal">
-                case
+                Project
               </span>
               <span className="text-2xl sm:text-3xl font-black text-[#0f172a] tracking-tight leading-none">
                 {caseNumber}
