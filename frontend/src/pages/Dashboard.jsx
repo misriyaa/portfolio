@@ -113,7 +113,16 @@ const Dashboard = () => {
   const fetchProfile = async () => {
     setLoadingProfile(true);
     try {
-      const res = await api.get("/api/profile");
+      let res;
+      try {
+        res = await api.get("/api/profile");
+      } catch (err1) {
+        if (err1.response?.status === 404) {
+          res = await api.get("/api/admin/banner");
+        } else {
+          throw err1;
+        }
+      }
       if (res.data?.data) {
         setCurrentProfile(res.data.data);
       }
@@ -186,7 +195,16 @@ const Dashboard = () => {
             : [];
           if (active) setProjectsList(list);
         } else if (activeTab === "profile" || activeTab === "contact") {
-          const res = await api.get("/api/profile");
+          let res;
+          try {
+            res = await api.get("/api/profile");
+          } catch (e2) {
+            if (e2.response?.status === 404) {
+              res = await api.get("/api/admin/banner");
+            } else {
+              throw e2;
+            }
+          }
           if (active && res.data?.data) {
             setCurrentProfile(res.data.data);
           }

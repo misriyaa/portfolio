@@ -18,7 +18,16 @@ const Footer = () => {
     let isMounted = true;
     const fetchProfile = async () => {
       try {
-        const res = await api.get("/api/profile");
+        let res;
+        try {
+          res = await api.get("/api/profile");
+        } catch (err1) {
+          if (err1.response?.status === 404) {
+            res = await api.get("/api/admin/banner");
+          } else {
+            throw err1;
+          }
+        }
         const data = res.data?.data;
         if (isMounted && data) {
           setProfile((prev) => ({
