@@ -5,7 +5,7 @@ const links = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Skills", path: "/skills" },
-  { name: "Projects", path: "/project" },
+  { name: "Projects", path: "/projects" },
   { name: "Contact", path: "/contact" },
 ];
 
@@ -13,7 +13,9 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    location.pathname === path ||
+    (path === "/projects" && location.pathname === "/project");
 
   // close menu on route change
   useEffect(() => {
