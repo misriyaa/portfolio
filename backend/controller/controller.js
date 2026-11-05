@@ -48,6 +48,20 @@ const uploadFileToCloudinary = async (file, folder = "portfolio") => {
     };
   }
 
+  if (file.secure_url) {
+    return {
+      secureUrl: ensureHttps(file.secure_url),
+      publicId: file.public_id || file.filename || "",
+    };
+  }
+
+  if (file.url && (file.url.startsWith("http://") || file.url.startsWith("https://"))) {
+    return {
+      secureUrl: ensureHttps(file.url),
+      publicId: file.public_id || file.filename || "",
+    };
+  }
+
   // 2. If multer saved the file locally to disk (diskStorage):
   if (file.path && fs.existsSync(file.path)) {
     const uploadRes = await cloudinary.uploader.upload(file.path, {

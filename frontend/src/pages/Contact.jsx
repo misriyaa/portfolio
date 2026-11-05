@@ -19,7 +19,7 @@ const Contact = () => {
     let isMounted = true;
     const fetchContactInfo = async () => {
       try {
-        const res = await api.get("/api/profile");
+        const res = await api.get("/api/admin/banner");
         const profile = res.data?.data;
         if (isMounted && profile) {
           setContactInfo({

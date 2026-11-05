@@ -70,14 +70,14 @@ app.get("/api/health", (req, res) => {
 
 /* ================= ROUTES ================= */
 
-// Public & Owner Profile Routes (Banner + Owner Contact Information)
-app.get("/api/profile", getProfile);
-app.put("/api/admin/profile", updateProfile);
-
-// Banner Routes - Supports /api/admin/banner and /api/profile/banner
+// Banner & Profile Routes (Consistent primary endpoints with backward compatibility aliases)
 app.get("/api/admin/banner", getBanner);
 app.post("/api/admin/banner", upload.single("banner"), uploadBanner);
+app.get("/api/profile", getBanner);
+app.post("/api/profile", upload.single("banner"), uploadBanner);
 app.post("/api/profile/banner", upload.single("banner"), uploadBanner);
+app.put("/api/admin/profile", updateProfile);
+app.put("/api/profile", updateProfile);
 
 // Skills Routes - Supported under both /api/admin and /api/admin/skills
 app.get("/api/admin", getSkills);
