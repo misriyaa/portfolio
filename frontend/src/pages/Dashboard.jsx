@@ -554,9 +554,7 @@ const Dashboard = () => {
                     formData.append("githubLink", values.githubLink.trim());
                     formData.append("image", values.image);
 
-                    const res = await api.post("/api/admin/projects", formData, {
-                      headers: { "Content-Type": "multipart/form-data" },
-                    });
+                    const res = await api.post("/api/admin/projects", formData);
 
                     showNotification(
                       "success",
@@ -812,9 +810,16 @@ const Dashboard = () => {
                     const formData = new FormData();
                     formData.append("banner", values.banner);
 
-                    const res = await api.post("/api/admin/banner", formData, {
-                      headers: { "Content-Type": "multipart/form-data" },
-                    });
+                    let res;
+                    try {
+                      res = await api.post("/api/admin/banner", formData);
+                    } catch (bErr) {
+                      if (bErr.response?.status === 404) {
+                        res = await api.post("/api/profile/banner", formData);
+                      } else {
+                        throw bErr;
+                      }
+                    }
 
                     showNotification(
                       "success",
@@ -825,10 +830,18 @@ const Dashboard = () => {
                     fetchProfile();
                   } catch (error) {
                     console.error("Banner upload error:", error);
-                    showNotification(
-                      "error",
-                      error.response?.data?.message || "Failed to upload banner."
-                    );
+                    const serverMsg = error.response?.data?.message;
+                    let displayMsg = serverMsg;
+                    if (!displayMsg) {
+                      if (!error.response || error.code === "ERR_NETWORK") {
+                        displayMsg = `Cannot connect to backend (${API_BASE_URL}). Please verify your backend is running.`;
+                      } else if (error.response?.status === 404) {
+                        displayMsg = "Banner upload endpoint not found (404). Please ensure the backend server is running.";
+                      } else {
+                        displayMsg = error.message || "Failed to upload banner.";
+                      }
+                    }
+                    showNotification("error", displayMsg);
                   } finally {
                     setSubmitting(false);
                   }

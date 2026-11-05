@@ -47,16 +47,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Multer Storage configured with Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    return {
-      folder: "portfolio",
-      resource_type: "image",
-    };
-  },
-});
+// Multer Storage configured with MemoryStorage for maximum reliability across cloud hosts & serverless
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -82,9 +74,10 @@ app.get("/api/health", (req, res) => {
 app.get("/api/profile", getProfile);
 app.put("/api/admin/profile", updateProfile);
 
-// Banner Routes
+// Banner Routes - Supports /api/admin/banner and /api/profile/banner
 app.get("/api/admin/banner", getBanner);
 app.post("/api/admin/banner", upload.single("banner"), uploadBanner);
+app.post("/api/profile/banner", upload.single("banner"), uploadBanner);
 
 // Skills Routes - Supported under both /api/admin and /api/admin/skills
 app.get("/api/admin", getSkills);

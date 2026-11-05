@@ -1,0 +1,13 @@
+{
+  "name": "portfolio-root",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js",
+    "build": "cd backend && npm install",
+    "postinstall": "cd backend && npm install"
+  }
+}
+

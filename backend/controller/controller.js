@@ -29,6 +29,17 @@ const uploadFileToCloudinary = async (file, folder = "portfolio") => {
     throw new Error("No file uploaded to process");
   }
 
+  // Verify Cloudinary credentials are provided
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    throw new Error(
+      "Cloudinary credentials are not configured in your environment variables. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your host/Render environment settings."
+    );
+  }
+
   // 1. If multer-storage-cloudinary already uploaded the file to Cloudinary:
   if (file.path && (file.path.startsWith("http://") || file.path.startsWith("https://"))) {
     return {
