@@ -491,6 +491,38 @@ export const getProjects = async (req, res) => {
   }
 };
 
+export const getProjectById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project ID format",
+      });
+    }
+
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    if (project.image && !project.image.startsWith("http")) {
+      await resolveStoredImage(project.image, project, "image");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error("Error in getProjectById:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const updateProject = async (req, res) => {
   try {
     const { id } = req.params;

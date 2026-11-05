@@ -23,6 +23,7 @@ import {
   deleteSkill,
   createProject,
   getProjects,
+  getProjectById,
   updateProject,
   deleteProject,
   uploadBanner,
@@ -91,6 +92,8 @@ app.delete("/api/admin/:id", deleteSkill);
 
 // Projects Routes
 app.get("/api/admin/projects", getProjects);
+app.get("/api/admin/projects/:id", getProjectById);
+app.get("/api/projects/:id", getProjectById);
 app.post("/api/admin/projects", upload.single("image"), createProject);
 app.put("/api/admin/projects/:id", upload.single("image"), updateProject);
 app.delete("/api/admin/projects/:id", deleteProject);

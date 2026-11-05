@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api, { resolveImageUrl } from "../config/api";
 import SkillsSection from "../components/SkillsSection";
+import ProjectCard from "../components/ProjectCard";
 import { ChevronRight, ArrowUpRight, Mail, Phone, MapPin } from "lucide-react";
 
 const Home = () => {
@@ -254,99 +255,53 @@ const Home = () => {
       {/* ========================================================
           4. PROJECTS SECTION PREVIEW
       ======================================================== */}
-      <section className="w-full py-20 md:py-28 px-5 sm:px-8 md:px-12 lg:px-16 border-b border-gray-100">
-        <div className="max-w-[1400px] mx-auto">
+      {projects && projects.length > 0 && (
+        <section className="w-full py-20 md:py-28 px-5 sm:px-8 md:px-12 lg:px-16 border-b border-gray-100 bg-[#fafafa]">
+          <div className="max-w-[1400px] mx-auto">
 
-          {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-[2px] w-16 bg-yellow-500" />
-                <span className="text-[10px] tracking-[0.4em] uppercase text-yellow-600 font-bold">
-                  Selected Works 03 // 04
-                </span>
+            {/* Section Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-16">
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-[2px] w-16 bg-yellow-500" />
+                  <span className="text-[10px] tracking-[0.4em] uppercase text-yellow-600 font-bold">
+                    Selected Works 03 // 04
+                  </span>
+                </div>
+                <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-zinc-900 uppercase tracking-tighter leading-none">
+                  FEATURED <br />
+                  <span className="text-gray-300 italic font-light lowercase tracking-normal">projects</span>
+                </h2>
               </div>
-              <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-zinc-900 uppercase tracking-tighter leading-none">
-                FEATURED <br />
-                <span className="text-gray-300 italic font-light lowercase tracking-normal">projects</span>
-              </h2>
+
+              <div className="max-w-sm">
+                <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                  Real-world web applications built with full database persistence, Cloudinary asset pipelines, and responsive UX.
+                </p>
+              </div>
             </div>
 
-            <div className="max-w-sm">
-              <p className="text-gray-500 text-sm font-medium leading-relaxed">
-                Real-world web applications built with full database persistence, Cloudinary asset pipelines, and responsive UX.
-              </p>
+            {/* Projects Grid Preview (Strictly 3 Projects with Premium Editorial Case Study Cards) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 mb-14">
+              {projects.slice(0, 3).map((project, index) => (
+                <ProjectCard key={project._id || index} project={project} index={index} />
+              ))}
             </div>
-          </div>
 
-          {/* Projects Grid Preview (Top 3) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {(projects.length > 0 ? projects.slice(0, 3) : []).map((project) => (
-              <div
-                key={project._id}
-                className="group border border-gray-100 p-4 rounded-sm hover:border-yellow-300 hover:shadow-lg transition-all duration-500 flex flex-col justify-between"
+            {/* View Full Projects Button */}
+            <div className="flex justify-center sm:justify-start">
+              <Link
+                to="/projects"
+                className="inline-flex items-center gap-3 bg-[#0f172a] text-white hover:bg-yellow-500 hover:text-black px-9 py-4 text-xs font-black uppercase tracking-[0.25em] transition-all duration-300 shadow-md group rounded-full"
               >
-                <div>
-                  <div className="overflow-hidden bg-gray-50 aspect-[16/9] flex items-center justify-center border border-gray-100 mb-5">
-                    <img
-                      src={resolveImageUrl(project.image)}
-                      alt={project.title}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22225%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%239ca3af%22%20font-size%3D%2214%22%20font-family%3D%22sans-serif%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EProject%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
-                      }}
-                      className="w-full h-full object-contain group-hover:scale-[1.03] transition-all duration-700"
-                    />
-                  </div>
+                <span>VIEW FULL PROJECTS</span>
+                <ArrowUpRight size={16} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </Link>
+            </div>
 
-                  <div className="w-8 h-[2px] bg-yellow-500 mb-3 group-hover:w-16 transition-all duration-500" />
-                  <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 mb-2 leading-snug">
-                    {project.title}
-                  </h3>
-                  <p className="text-zinc-500 text-xs sm:text-sm line-clamp-3 leading-relaxed mb-6 font-medium">
-                    {project.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                  {project.liveLink && (
-                    <a
-                      href={project.liveLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-[#1a1a1a] text-white text-[10px] uppercase tracking-[0.2em] px-4 py-2.5 hover:bg-yellow-500 hover:text-black font-bold transition-all"
-                    >
-                      Live Demo ↗
-                    </a>
-                  )}
-                  {project.githubLink && (
-                    <a
-                      href={project.githubLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="border border-gray-300 text-zinc-800 text-[10px] uppercase tracking-[0.2em] px-4 py-2.5 hover:border-black font-bold transition-all"
-                    >
-                      GitHub ↗
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
-
-          {/* View All Projects Button */}
-          <div className="flex justify-center sm:justify-start">
-            <Link
-              to="/projects"
-              className="inline-flex items-center gap-3 bg-zinc-900 text-white hover:bg-yellow-500 hover:text-black px-7 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-md group"
-            >
-              <span>View All Projects</span>
-              <ChevronRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-        </div>
-      </section>
+        </section>
+      )}
 
 
       {/* ========================================================

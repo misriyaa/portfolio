@@ -8,6 +8,7 @@ import {
 import About from "./pages/About";
 import Skills from "./pages/Skills";
 import Project from "./pages/Project";
+import ProjectDetails from "./pages/ProjectDetails";
 import Contact from "./pages/Contact";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -23,7 +24,9 @@ const App = () => {
           <Route path="about" element={<About />} />
           <Route path="skills" element={<Skills />} />
           <Route path="projects" element={<Project />} />
+          <Route path="projects/:id" element={<ProjectDetails />} />
           <Route path="project" element={<Project />} />
+          <Route path="project/:id" element={<ProjectDetails />} />
           <Route path="contact" element={<Contact />} />
         </Route>
 

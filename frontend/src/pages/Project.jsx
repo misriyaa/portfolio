@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import api, { resolveImageUrl } from "../config/api";
+import api from "../config/api";
+import ProjectCard from "../components/ProjectCard";
 
 const Project = () => {
   const [projects, setProjects] = useState([]);
@@ -34,13 +35,13 @@ const Project = () => {
   }, []);
 
   return (
-    <section className="bg-white py-24 px-6 md:px-12 lg:px-16 overflow-hidden">
+    <section className="bg-[#fafafa] py-24 px-6 md:px-12 lg:px-16 overflow-hidden min-h-screen">
       <div className="max-w-[1400px] mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-20">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16 md:mb-20">
           <div>
-            <p className="text-[10px] sm:text-xs tracking-[0.35em] font-bold text-yellow-500 uppercase mb-5">
-              Selected Works
+            <p className="text-[10px] sm:text-xs tracking-[0.35em] font-bold text-yellow-600 uppercase mb-4">
+              Selected Works // Archives
             </p>
 
             <h1 className="text-[13vw] sm:text-[10vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter uppercase text-[#1a1a1a]">
@@ -53,91 +54,46 @@ const Project = () => {
 
           <div className="max-w-sm">
             <p className="text-gray-500 text-sm sm:text-base leading-relaxed font-medium">
-              A curated collection of modern web experiences focused on
-              performance, interaction, scalability, and premium UI engineering.
+              A curated collection of web applications and editorial digital products.
+              Click on any case study to explore full architectural details and live links.
             </p>
           </div>
         </div>
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
-            Loading Projects...
+          <div className="py-24 text-center">
+            <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-xs uppercase tracking-[0.3em] font-bold text-gray-400">
+              Loading Projects...
+            </p>
           </div>
         ) : projects.length === 0 ? (
-          <div className="py-20 text-center text-gray-400 font-medium">
-            No projects added yet. Upload your featured projects via the admin dashboard.
+          <div className="py-24 text-center bg-white rounded-3xl border border-dashed border-gray-200 p-12 max-w-lg mx-auto">
+            <p className="text-gray-500 font-medium text-sm mb-2">
+              No projects saved yet.
+            </p>
+            <p className="text-gray-400 text-xs">
+              Upload your projects via the Admin Dashboard to have them permanently appear here.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-            {projects.map((project) => (
-              <div key={project._id} className="group relative">
-                {/* Card */}
-                <div className="relative z-10">
-                  {/* Image */}
-                  <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
-                    <img
-                      src={resolveImageUrl(project.image)}
-                      alt={project.title}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22225%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%239ca3af%22%20font-size%3D%2214%22%20font-family%3D%22sans-serif%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EProject%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
-                      }}
-                      className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="pt-8">
-                    {/* Small line */}
-                    <div className="w-10 h-[2px] bg-yellow-500 mb-5 group-hover:w-20 transition-all duration-500" />
-
-                    {/* Title */}
-                    <h2 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] uppercase leading-none mb-4">
-                      {project.title}
-                    </h2>
-
-                    {/* Description */}
-                    <p className="text-gray-500 text-sm md:text-[15px] leading-7 max-w-md mb-8 font-medium">
-                      {project.description}
-                    </p>
-
-                    {/* Buttons */}
-                    <div className="flex flex-wrap items-center gap-4">
-                      {project.liveLink && (
-                        <a
-                          href={project.liveLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#1a1a1a] text-white text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:bg-yellow-500 hover:text-black transition-all duration-300 font-bold"
-                        >
-                          View Live
-                        </a>
-                      )}
-
-                      {project.githubLink && (
-                        <a
-                          href={project.githubLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="border border-gray-300 text-[#1a1a1a] text-[11px] uppercase tracking-[0.2em] px-6 py-4 hover:border-black transition-all duration-300 font-bold"
-                        >
-                          Github
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
+            {projects.map((project, index) => (
+              <ProjectCard
+                key={project._id || index}
+                project={project}
+                index={index}
+              />
             ))}
           </div>
         )}
 
         {/* Bottom typography */}
-        <div className="mt-24 overflow-hidden">
-          <h1 className="text-[18vw] md:text-[14vw] leading-none font-black tracking-[-0.08em] uppercase text-[#f5f5f5] whitespace-nowrap">
-            Creative Developer
-          </h1>
+        <div className="mt-28 overflow-hidden select-none">
+          <h2 className="text-[18vw] md:text-[14vw] leading-none font-black tracking-[-0.08em] uppercase text-slate-200/50 whitespace-nowrap">
+            Creative Works
+          </h2>
         </div>
       </div>
     </section>
