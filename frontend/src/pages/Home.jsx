@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api, { resolveImageUrl } from "../config/api";
+import SkillsSection from "../components/SkillsSection";
 import { ChevronRight, ArrowUpRight, Mail, Phone, MapPin } from "lucide-react";
 
 const Home = () => {
@@ -44,14 +45,14 @@ const Home = () => {
             });
           }
 
-          // Skills
+          // Skills (strictly from MongoDB)
           if (skillsRes.status === "fulfilled") {
             const rawSkills = Array.isArray(skillsRes.value.data?.data)
               ? skillsRes.value.data.data
               : Array.isArray(skillsRes.value.data)
               ? skillsRes.value.data
               : [];
-            setSkills(rawSkills);
+            setSkills([...rawSkills].reverse());
           }
 
           // Projects
@@ -238,82 +239,16 @@ const Home = () => {
 
 
       {/* ========================================================
-          3. SKILLS SECTION PREVIEW
+          3. SKILLS SECTION PREVIEW (Reuses Skills.jsx exact accordion design)
+          Only displayed if MongoDB actually has saved skills.
       ======================================================== */}
-      <section className="w-full py-20 md:py-28 px-5 sm:px-8 md:px-12 lg:px-16 border-b border-gray-100">
-        <div className="max-w-[1400px] mx-auto">
-
-          {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-            <div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-[2px] w-16 bg-yellow-500" />
-                <span className="text-[10px] tracking-[0.4em] uppercase text-zinc-900 font-bold">
-                  Skills 02 // 04
-                </span>
-              </div>
-              <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-zinc-900 uppercase tracking-tighter leading-none">
-                WHAT I CAN <br />
-                <span style={{ WebkitTextStroke: "1.5px #eab308", color: "transparent" }}>DO FOR YOU</span>
-              </h2>
-            </div>
-
-            <div className="max-w-sm">
-              <p className="text-zinc-500 text-sm font-medium leading-relaxed border-l-2 border-yellow-500 pl-4">
-                Core technologies and architectures I utilize to engineer seamless digital products.
-              </p>
-            </div>
-          </div>
-
-          {/* Skills Grid Preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            {(skills.length > 0 ? skills.slice(0, 4) : [
-              { title: "Frontend", skills: ["React.js", "JavaScript (ES6+)", "Tailwind CSS", "Redux"] },
-              { title: "Backend", skills: ["Node.js", "Express.js", "REST APIs", "JWT Auth"] },
-              { title: "Database", skills: ["MongoDB", "Mongoose", "SQL", "Atlas"] },
-              { title: "Tools & Cloud", skills: ["Git & GitHub", "Cloudinary", "Postman", "Vercel"] },
-            ]).map((category, index) => (
-              <div
-                key={category._id || index}
-                className="p-6 bg-gray-50/70 border border-gray-100 rounded-sm hover:border-yellow-400 hover:shadow-md transition-all duration-300 group"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs font-black text-yellow-600 font-mono">0{index + 1}</span>
-                  <h3 className="text-lg font-black uppercase tracking-tight text-zinc-900 group-hover:text-yellow-600 transition-colors">
-                    {category.title}
-                  </h3>
-                </div>
-
-                <ul className="space-y-2.5">
-                  {(category.skills || []).slice(0, 4).map((skill, sIdx) => (
-                    <li key={sIdx} className="flex items-center gap-2.5 text-zinc-700 text-xs sm:text-sm font-bold uppercase tracking-tight">
-                      <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
-                      <span>{skill}</span>
-                    </li>
-                  ))}
-                  {(category.skills || []).length > 4 && (
-                    <li className="text-[11px] text-zinc-400 font-medium italic pt-1">
-                      +{(category.skills || []).length - 4} more skills...
-                    </li>
-                  )}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          {/* View All Skills Button */}
-          <div className="flex justify-center sm:justify-start">
-            <Link
-              to="/skills"
-              className="inline-flex items-center gap-3 bg-zinc-900 text-white hover:bg-yellow-500 hover:text-black px-7 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-md group"
-            >
-              <span>View All Skills &amp; Services</span>
-              <ChevronRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-        </div>
-      </section>
+      {skills && skills.length > 0 && (
+        <SkillsSection
+          skills={skills}
+          preview={true}
+          limit={3}
+        />
+      )}
 
 
       {/* ========================================================
