@@ -115,13 +115,9 @@ const Dashboard = () => {
     try {
       let res;
       try {
+        res = await api.get("/api/admin/banner");
+      } catch {
         res = await api.get("/api/profile");
-      } catch (err1) {
-        if (err1.response?.status === 404) {
-          res = await api.get("/api/admin/banner");
-        } else {
-          throw err1;
-        }
       }
       if (res.data?.data) {
         setCurrentProfile(res.data.data);
@@ -197,13 +193,9 @@ const Dashboard = () => {
         } else if (activeTab === "profile" || activeTab === "contact") {
           let res;
           try {
+            res = await api.get("/api/admin/banner");
+          } catch {
             res = await api.get("/api/profile");
-          } catch (e2) {
-            if (e2.response?.status === 404) {
-              res = await api.get("/api/admin/banner");
-            } else {
-              throw e2;
-            }
           }
           if (active && res.data?.data) {
             setCurrentProfile(res.data.data);

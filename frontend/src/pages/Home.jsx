@@ -24,14 +24,8 @@ const Home = () => {
     const fetchAllHomeData = async () => {
       try {
         const [profileRes, skillsRes, projectsRes] = await Promise.allSettled([
-          api.get("/api/profile").catch((err) => {
-            if (err.response?.status === 404) return api.get("/api/admin/banner");
-            throw err;
-          }),
-          api.get("/api/admin").catch((err) => {
-            if (err.response?.status === 404) return api.get("/api/admin/skills");
-            throw err;
-          }),
+          api.get("/api/admin/banner").catch(() => api.get("/api/profile")),
+          api.get("/api/admin").catch(() => api.get("/api/admin/skills")),
           api.get("/api/admin/projects"),
         ]);
 
