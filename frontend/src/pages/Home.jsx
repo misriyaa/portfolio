@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api, { API_BASE_URL } from "../config/api";
+import api, { resolveImageUrl } from "../config/api";
 import { ChevronRight, ArrowUpRight, Mail, Phone, MapPin } from "lucide-react";
 
 const Home = () => {
   const [banner, setBanner] = useState("");
+  const [bannerFailed, setBannerFailed] = useState(false);
+  const [aboutImgFailed, setAboutImgFailed] = useState(false);
+
   const [profile, setProfile] = useState({
     email: "misriya8784@gmail.com",
     phone: "+91 8714945730",
@@ -29,7 +32,11 @@ const Home = () => {
           // Banner & Profile
           if (profileRes.status === "fulfilled" && profileRes.value.data?.data) {
             const data = profileRes.value.data.data;
-            if (data.banner) setBanner(data.banner);
+            if (data.banner) {
+              setBanner(data.banner);
+              setBannerFailed(false);
+              setAboutImgFailed(false);
+            }
             setProfile({
               email: data.email || "misriya8784@gmail.com",
               phone: data.phone || "+91 8714945730",
@@ -70,14 +77,6 @@ const Home = () => {
       isMounted = false;
     };
   }, []);
-
-  const getImageSrc = (imagePath) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-    return `${API_BASE_URL}/uploads/${imagePath}`;
-  };
 
   return (
     <div className="w-full bg-white text-[#1a1a1a] selection:bg-yellow-100 font-sans">
@@ -136,15 +135,19 @@ const Home = () => {
 
             <div className="relative group">
               <div className="h-[34svh] md:h-[56svh] aspect-[4/5] bg-gray-50 overflow-hidden rounded-sm shadow-[16px_16px_0px_0px_rgba(234,179,8,0.15)] border border-gray-100">
-                {banner ? (
+                {banner && !bannerFailed ? (
                   <img
-                    src={getImageSrc(banner)}
+                    src={resolveImageUrl(banner)}
                     alt="Nafeesathul Misriya"
+                    onError={() => setBannerFailed(true)}
                     className="w-full h-full object-cover object-top grayscale-[20%] hover:grayscale-0 transition-all duration-700"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 italic text-sm">
-                    {loading ? "Loading visual..." : "Portrait"}
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 text-xs text-center p-4">
+                    <span className="font-bold text-gray-500 uppercase tracking-widest text-[11px] mb-1">
+                      {loading ? "Loading visual..." : "Nafeesathul Misriya"}
+                    </span>
+                    <span className="text-[10px] text-gray-400">Full Stack Web Developer</span>
                   </div>
                 )}
               </div>
@@ -213,10 +216,11 @@ const Home = () => {
               <div className="relative max-w-[280px] sm:max-w-[320px] w-full">
                 <div className="absolute -right-3 -bottom-3 w-full h-full bg-yellow-500 rounded-sm -z-10" />
                 <div className="aspect-[4/5] bg-gray-50 overflow-hidden rounded-sm border border-gray-100 shadow-lg">
-                  {banner ? (
+                  {banner && !aboutImgFailed ? (
                     <img
-                      src={getImageSrc(banner)}
+                      src={resolveImageUrl(banner)}
                       alt="Nafeesathul Misriya"
+                      onError={() => setAboutImgFailed(true)}
                       className="w-full h-full object-cover grayscale-[10%]"
                     />
                   ) : (
@@ -350,8 +354,12 @@ const Home = () => {
                 <div>
                   <div className="overflow-hidden bg-gray-50 aspect-[16/9] flex items-center justify-center border border-gray-100 mb-5">
                     <img
-                      src={getImageSrc(project.image)}
+                      src={resolveImageUrl(project.image)}
                       alt={project.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22225%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%239ca3af%22%20font-size%3D%2214%22%20font-family%3D%22sans-serif%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EProject%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                      }}
                       className="w-full h-full object-contain group-hover:scale-[1.03] transition-all duration-700"
                     />
                   </div>

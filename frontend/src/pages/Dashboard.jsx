@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import api, { API_BASE_URL } from "../config/api";
+import api, { resolveImageUrl } from "../config/api";
 import { Formik, Form, Field, FieldArray } from "formik";
-import { Trash2, Edit3, Image as ImageIcon, Send, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
+import { Trash2, Edit3, Image as ImageIcon, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("skills");
@@ -178,14 +178,6 @@ const Dashboard = () => {
       active = false;
     };
   }, [activeTab]);
-
-  const getImageSrc = (imagePath) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-    return `${API_BASE_URL}/uploads/${imagePath}`;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 sm:p-6 md:p-8 flex justify-center font-sans">
@@ -626,8 +618,12 @@ const Dashboard = () => {
                       <div className="space-y-3">
                         <div className="h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-100">
                           <img
-                            src={getImageSrc(proj.image)}
+                            src={resolveImageUrl(proj.image)}
                             alt={proj.title}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22225%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%239ca3af%22%20font-size%3D%2214%22%20font-family%3D%22sans-serif%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EProject%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                            }}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -687,17 +683,36 @@ const Dashboard = () => {
                 <div className="py-6 text-center text-sm text-gray-400">Loading current banner...</div>
               ) : currentProfile?.banner ? (
                 <div className="space-y-3">
-                  <div className="h-56 bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                  <div className="h-56 bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center">
                     <img
-                      src={getImageSrc(currentProfile.banner)}
+                      src={resolveImageUrl(currentProfile.banner)}
                       alt="Active Banner"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.style.display = "none";
+                        if (e.currentTarget.nextElementSibling) {
+                          e.currentTarget.nextElementSibling.style.display = "flex";
+                        }
+                      }}
                       className="w-full h-full object-cover object-top"
                     />
+                    <div className="hidden flex-col items-center justify-center p-6 text-center text-gray-400 text-xs">
+                      <ImageIcon size={32} className="text-gray-300 mb-2" />
+                      <p className="font-bold text-gray-500">Image file not found on disk or Cloudinary</p>
+                      <p className="text-gray-400 mt-1">Please select an image file below to upload permanently to Cloudinary.</p>
+                    </div>
                   </div>
-                  <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2 border border-emerald-200">
-                    <CheckCircle size={14} />
-                    <span>Permanent Cloudinary HTTPS URL stored in MongoDB.</span>
-                  </div>
+                  {currentProfile.banner.startsWith("http") ? (
+                    <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2 border border-emerald-200">
+                      <CheckCircle size={14} />
+                      <span>Permanent Cloudinary HTTPS URL active in MongoDB.</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-amber-800 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-2 border border-amber-200">
+                      <AlertCircle size={14} />
+                      <span>Notice: MongoDB currently holds a local filename ({currentProfile.banner}). Please upload a banner below to store permanently in Cloudinary.</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="py-8 text-center text-sm text-gray-400 bg-white rounded-lg border border-dashed border-gray-200">

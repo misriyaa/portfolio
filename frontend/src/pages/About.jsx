@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { FaInstagram, FaGithub, FaLinkedin } from "react-icons/fa";
-import api, { API_BASE_URL } from "../config/api";
+import api, { resolveImageUrl } from "../config/api";
 import ScrollVelocity from "../components/scrolltext/ScrollVelocity";
 
 const About = () => {
   const [banner, setBanner] = useState("");
+  const [imageFailed, setImageFailed] = useState(false);
   const [socials, setSocials] = useState({
     github: "https://github.com/misriyaa",
     linkedin: "https://www.linkedin.com/in/nafeesathul-misriya-p/",
@@ -18,7 +19,10 @@ const About = () => {
         const res = await api.get("/api/profile");
         const profile = res.data?.data;
         if (isMounted && profile) {
-          if (profile.banner) setBanner(profile.banner);
+          if (profile.banner) {
+            setBanner(profile.banner);
+            setImageFailed(false);
+          }
           if (profile.socialLinks) {
             setSocials((prev) => ({
               ...prev,
@@ -36,14 +40,6 @@ const About = () => {
       isMounted = false;
     };
   }, []);
-
-  const getImageSrc = (imagePath) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-    return `${API_BASE_URL}/uploads/${imagePath}`;
-  };
 
   return (
     <section className="w-full bg-white overflow-hidden">
@@ -65,15 +61,17 @@ const About = () => {
         <div className="md:col-span-5 flex justify-center md:justify-start relative">
           <div className="absolute -right-2 sm:-right-3 -bottom-2 sm:-bottom-3 w-full h-full bg-yellow-500 rounded-sm -z-10" />
           <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-full aspect-[4/5] bg-white overflow-hidden rounded-sm shadow-xl border border-gray-100">
-            {banner ? (
+            {banner && !imageFailed ? (
               <img
-                src={getImageSrc(banner)}
+                src={resolveImageUrl(banner)}
                 alt="Nafeesathul Misriya"
+                onError={() => setImageFailed(true)}
                 className="w-full h-full object-cover grayscale-[10%]"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">
-                Portrait
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 text-xs text-center p-4">
+                <span className="font-bold text-gray-500 uppercase tracking-widest text-xs mb-1">Nafeesathul Misriya</span>
+                <span className="text-[10px] text-gray-400">Portrait</span>
               </div>
             )}
           </div>

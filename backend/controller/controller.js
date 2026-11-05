@@ -1,8 +1,14 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { Skill } from "../model/SkillsSchema.js";
 import { Project } from "../model/projectSchema.js";
 import { Profile } from "../model/profileSchema.js";
 import { ContactMessage } from "../model/contactMessageSchema.js";
 import cloudinary from "../config/cloudinary.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper to ensure HTTPS URL
 const ensureHttps = (url) => {
@@ -13,6 +19,113 @@ const ensureHttps = (url) => {
   return url;
 };
 
+/**
+ * Universal upload processor:
+ * Guarantees that any uploaded file (whether via multer-storage-cloudinary, diskStorage,
+ * or memoryStorage) is uploaded to Cloudinary, returning a permanent HTTPS secure_url.
+ */
+const uploadFileToCloudinary = async (file, folder = "portfolio") => {
+  if (!file) {
+    throw new Error("No file uploaded to process");
+  }
+
+  // 1. If multer-storage-cloudinary already uploaded the file to Cloudinary:
+  if (file.path && (file.path.startsWith("http://") || file.path.startsWith("https://"))) {
+    return {
+      secureUrl: ensureHttps(file.path),
+      publicId: file.filename || "",
+    };
+  }
+
+  // 2. If multer saved the file locally to disk (diskStorage):
+  if (file.path && fs.existsSync(file.path)) {
+    const uploadRes = await cloudinary.uploader.upload(file.path, {
+      folder,
+      resource_type: "image",
+    });
+
+    // Clean up local temp file after uploading to Cloudinary
+    try {
+      fs.unlinkSync(file.path);
+    } catch (e) {
+      // Ignore deletion error
+    }
+
+    return {
+      secureUrl: ensureHttps(uploadRes.secure_url),
+      publicId: uploadRes.public_id || "",
+    };
+  }
+
+  // 3. If multer kept the file in memory buffer (memoryStorage):
+  if (file.buffer) {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder, resource_type: "image" },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve({
+            secureUrl: ensureHttps(result.secure_url),
+            publicId: result.public_id || "",
+          });
+        }
+      );
+      stream.end(file.buffer);
+    });
+  }
+
+  throw new Error("File upload failed: No valid Cloudinary URL, disk path, or memory buffer found");
+};
+
+/**
+ * Checks if a legacy stored image string is a local filename.
+ * If the physical file exists in backend/uploads, automatically migrates it to Cloudinary
+ * and permanently updates the MongoDB document.
+ */
+const resolveStoredImage = async (imageString, docToUpdate = null, fieldName = "banner") => {
+  if (!imageString || typeof imageString !== "string") return "";
+
+  // Already a remote HTTP/HTTPS URL
+  if (imageString.startsWith("http://") || imageString.startsWith("https://")) {
+    return ensureHttps(imageString);
+  }
+
+  // Local filename: check if it physically exists in backend/uploads
+  const cleanFilename = path.basename(imageString);
+  const possiblePaths = [
+    path.join(__dirname, "../uploads", cleanFilename),
+    path.join(process.cwd(), "uploads", cleanFilename),
+    path.join(process.cwd(), "backend/uploads", cleanFilename),
+  ];
+
+  for (const localPath of possiblePaths) {
+    if (fs.existsSync(localPath)) {
+      try {
+        console.log(`Auto-migrating legacy file ${cleanFilename} to Cloudinary...`);
+        const uploadRes = await cloudinary.uploader.upload(localPath, {
+          folder: "portfolio",
+          resource_type: "image",
+        });
+
+        const secureUrl = ensureHttps(uploadRes.secure_url);
+        if (docToUpdate) {
+          docToUpdate[fieldName] = secureUrl;
+          if (fieldName === "banner") docToUpdate.bannerPublicId = uploadRes.public_id;
+          if (fieldName === "image") docToUpdate.imagePublicId = uploadRes.public_id;
+          await docToUpdate.save();
+          console.log(`Successfully migrated ${cleanFilename} to ${secureUrl}`);
+        }
+        return secureUrl;
+      } catch (migErr) {
+        console.warn(`Failed to auto-migrate ${cleanFilename}:`, migErr.message);
+      }
+    }
+  }
+
+  // Physical file does not exist on disk
+  return imageString;
+};
+
 /* ================= PROFILE & BANNER ================= */
 
 export const getProfile = async (req, res) => {
@@ -20,7 +133,10 @@ export const getProfile = async (req, res) => {
     let profile = await Profile.findOne();
     if (!profile) {
       profile = await Profile.create({});
+    } else if (profile.banner && !profile.banner.startsWith("http")) {
+      await resolveStoredImage(profile.banner, profile, "banner");
     }
+
     res.status(200).json({
       success: true,
       data: profile,
@@ -71,14 +187,14 @@ export const uploadBanner = async (req, res) => {
       });
     }
 
-    const secureBannerUrl = ensureHttps(req.file.path || req.file.secure_url);
-    const bannerPublicId = req.file.filename || "";
+    // Process upload to guarantee a permanent Cloudinary HTTPS URL
+    const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
 
     let profile = await Profile.findOne();
 
     if (profile) {
       // Clean up previous image from Cloudinary if it had a public ID
-      if (profile.bannerPublicId && profile.bannerPublicId !== bannerPublicId) {
+      if (profile.bannerPublicId && profile.bannerPublicId !== publicId) {
         try {
           await cloudinary.uploader.destroy(profile.bannerPublicId);
         } catch (destroyErr) {
@@ -86,22 +202,25 @@ export const uploadBanner = async (req, res) => {
         }
       }
 
-      profile.banner = secureBannerUrl;
-      profile.bannerPublicId = bannerPublicId;
+      profile.banner = secureUrl;
+      profile.bannerPublicId = publicId;
       await profile.save();
     } else {
       profile = await Profile.create({
-        banner: secureBannerUrl,
-        bannerPublicId,
+        banner: secureUrl,
+        bannerPublicId: publicId,
       });
     }
 
+    console.log("Banner saved to MongoDB with Cloudinary URL:", profile.banner);
+
     res.status(200).json({
       success: true,
-      message: "Banner uploaded and saved permanently",
+      message: "Banner uploaded to Cloudinary and saved permanently in MongoDB",
       data: profile,
     });
   } catch (error) {
+    console.error("Upload banner error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -111,6 +230,8 @@ export const getBanner = async (req, res) => {
     let profile = await Profile.findOne();
     if (!profile) {
       profile = await Profile.create({});
+    } else if (profile.banner && !profile.banner.startsWith("http")) {
+      await resolveStoredImage(profile.banner, profile, "banner");
     }
 
     res.status(200).json({
@@ -264,24 +385,27 @@ export const createProject = async (req, res) => {
       });
     }
 
-    const secureImageUrl = ensureHttps(req.file.path || req.file.secure_url);
-    const imagePublicId = req.file.filename || "";
+    // Process upload to guarantee a permanent Cloudinary HTTPS URL
+    const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
 
     const project = await Project.create({
       title: title.trim(),
       description: description ? description.trim() : "",
       liveLink: liveLink ? liveLink.trim() : "",
       githubLink: githubLink ? githubLink.trim() : "",
-      image: secureImageUrl,
-      imagePublicId,
+      image: secureUrl,
+      imagePublicId: publicId,
     });
+
+    console.log("Project created with Cloudinary image URL:", project.image);
 
     res.status(201).json({
       success: true,
-      message: "Project created successfully",
+      message: "Project created successfully with Cloudinary image",
       data: project,
     });
   } catch (error) {
+    console.error("Create project error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -292,6 +416,13 @@ export const createProject = async (req, res) => {
 export const getProjects = async (req, res) => {
   try {
     const projects = await Project.find().sort({ createdAt: -1 });
+
+    // Auto-migrate any local project images if they physically exist
+    for (const proj of projects) {
+      if (proj.image && !proj.image.startsWith("http")) {
+        await resolveStoredImage(proj.image, proj, "image");
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -320,8 +451,10 @@ export const updateProject = async (req, res) => {
     if (liveLink !== undefined) project.liveLink = liveLink.trim();
     if (githubLink !== undefined) project.githubLink = githubLink.trim();
 
-    // If new image uploaded
+    // If a new image was uploaded
     if (req.file) {
+      const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
+
       if (project.imagePublicId) {
         try {
           await cloudinary.uploader.destroy(project.imagePublicId);
@@ -329,8 +462,9 @@ export const updateProject = async (req, res) => {
           console.warn("Could not destroy old project image:", destroyErr.message);
         }
       }
-      project.image = ensureHttps(req.file.path || req.file.secure_url);
-      project.imagePublicId = req.file.filename || "";
+
+      project.image = secureUrl;
+      project.imagePublicId = publicId;
     }
 
     await project.save();

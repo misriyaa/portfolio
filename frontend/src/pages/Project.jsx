@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api, { API_BASE_URL } from "../config/api";
+import api, { resolveImageUrl } from "../config/api";
 
 const Project = () => {
   const [projects, setProjects] = useState([]);
@@ -32,14 +32,6 @@ const Project = () => {
       isMounted = false;
     };
   }, []);
-
-  const getImageSrc = (imagePath) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-    return `${API_BASE_URL}/uploads/${imagePath}`;
-  };
 
   return (
     <section className="bg-white py-24 px-6 md:px-12 lg:px-16 overflow-hidden">
@@ -85,8 +77,12 @@ const Project = () => {
                   {/* Image */}
                   <div className="overflow-hidden bg-gray-100 rounded-sm border border-gray-100 aspect-[16/9] flex items-center justify-center">
                     <img
-                      src={getImageSrc(project.image)}
+                      src={resolveImageUrl(project.image)}
                       alt={project.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22225%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%239ca3af%22%20font-size%3D%2214%22%20font-family%3D%22sans-serif%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EProject%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                      }}
                       className="w-full h-full object-contain group-hover:scale-[1.02] transition-all duration-700"
                     />
                   </div>

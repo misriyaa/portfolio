@@ -50,9 +50,11 @@ app.use(express.urlencoded({ extended: true }));
 // Multer Storage configured with Cloudinary
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: "portfolio",
-    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+  params: async (req, file) => {
+    return {
+      folder: "portfolio",
+      resource_type: "image",
+    };
   },
 });
 
