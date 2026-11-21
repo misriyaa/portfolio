@@ -125,8 +125,41 @@ export const uploadDirectToCloudinary = async (
     const cldMsg = cldError?.message || uploadErr.message;
 
     if (cldMsg.includes("missing permissions") || cldMsg.includes("actions=[\"create\"]")) {
+      console.warn("[Cloudinary Client] Signed upload rejected because API Key lacks 'create' permissions. Attempting unsigned upload fallback with preset 'portfolio'...");
+      try {
+        const fallbackFormData = new FormData();
+        fallbackFormData.append("file", file);
+        fallbackFormData.append("upload_preset", "portfolio");
+        if (targetFolder) fallbackFormData.append("folder", targetFolder);
+
+        const fallbackRes = await axios.post(cloudinaryUploadUrl, fallbackFormData, {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total && onProgress) {
+              const percent = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              onProgress(percent);
+            }
+          },
+        });
+
+        if (fallbackRes.data?.secure_url) {
+          console.log("[Cloudinary Client] Unsigned upload succeeded with 'portfolio' preset!", fallbackRes.data.secure_url);
+          return {
+            secureUrl: fallbackRes.data.secure_url,
+            publicId: fallbackRes.data.public_id,
+            format: fallbackRes.data.format,
+            bytes: fallbackRes.data.bytes,
+            width: fallbackRes.data.width,
+            height: fallbackRes.data.height,
+          };
+        }
+      } catch (fallbackErr) {
+        console.warn("[Cloudinary Client] Unsigned preset 'portfolio' fallback was not active:", fallbackErr?.response?.data?.error?.message || fallbackErr.message);
+      }
+
       throw new Error(
-        `Cloudinary Permissions Issue: Your Cloudinary API Key lacks 'create' permissions. In your Cloudinary Console (Settings > Access Keys / API Keys), ensure this key has upload/create permissions. Details: ${cldMsg}`
+        `Cloudinary API Key Missing 'Create' Permission: In your Cloudinary Console (https://console.cloudinary.com), copy your Master API Key & Secret from the Dashboard into backend/.env (and Vercel/Render env vars), or go to Settings > API Keys and grant key ${apiKey} the 'Master Admin' / 'Create' role.`
       );
     }
 
