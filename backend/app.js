@@ -12,8 +12,6 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "./config/cloudinary.js";
 
 import {
@@ -26,6 +24,7 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
+  getCloudinarySignature,
   uploadBanner,
   getBanner,
   getProfile,
@@ -48,14 +47,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Multer Storage configured with MemoryStorage for maximum reliability across cloud hosts & serverless
-const storage = multer.memoryStorage();
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max limit
-});
-
 // Static uploads folder for backward compatibility
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -71,12 +62,17 @@ app.get("/api/health", (req, res) => {
 
 /* ================= ROUTES ================= */
 
-// Banner & Profile Routes (Consistent primary endpoints with backward compatibility aliases)
+// Direct Cloudinary Upload Signature Route (Signed Upload Architecture)
+app.post("/api/cloudinary/sign", getCloudinarySignature);
+app.get("/api/cloudinary/sign", getCloudinarySignature);
+app.post("/api/admin/cloudinary-sign", getCloudinarySignature);
+
+// Banner & Profile Routes (Direct Cloudinary URL persistence with backward compatibility aliases)
 app.get("/api/admin/banner", getBanner);
-app.post("/api/admin/banner", upload.single("banner"), uploadBanner);
+app.post("/api/admin/banner", uploadBanner);
 app.get("/api/profile", getBanner);
-app.post("/api/profile", upload.single("banner"), uploadBanner);
-app.post("/api/profile/banner", upload.single("banner"), uploadBanner);
+app.post("/api/profile", uploadBanner);
+app.post("/api/profile/banner", uploadBanner);
 app.put("/api/admin/profile", updateProfile);
 app.put("/api/profile", updateProfile);
 
@@ -90,12 +86,12 @@ app.put("/api/admin/:id", updateSkill);
 app.delete("/api/admin/skills/:id", deleteSkill);
 app.delete("/api/admin/:id", deleteSkill);
 
-// Projects Routes
+// Projects Routes (Direct Cloudinary URL persistence)
 app.get("/api/admin/projects", getProjects);
 app.get("/api/admin/projects/:id", getProjectById);
 app.get("/api/projects/:id", getProjectById);
-app.post("/api/admin/projects", upload.single("image"), createProject);
-app.put("/api/admin/projects/:id", upload.single("image"), updateProject);
+app.post("/api/admin/projects", createProject);
+app.put("/api/admin/projects/:id", updateProject);
 app.delete("/api/admin/projects/:id", deleteProject);
 
 // Visitor Contact Message Routes

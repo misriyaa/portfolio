@@ -2,10 +2,15 @@ import React, { useState, useEffect } from "react";
 import api, { resolveImageUrl, API_BASE_URL } from "../config/api";
 import { Formik, Form, Field, FieldArray } from "formik";
 import { Trash2, Edit3, Image as ImageIcon, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
+import { uploadDirectToCloudinary } from "../utils/cloudinaryUpload";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("skills");
   const tabs = ["skills", "projects", "profile", "contact", "messages"];
+
+  // Real-time Cloudinary direct upload progress states
+  const [projectUploadProgress, setProjectUploadProgress] = useState(0);
+  const [bannerUploadProgress, setBannerUploadProgress] = useState(0);
 
   // Global feedback notification
   const [notification, setNotification] = useState({ type: "", message: "" });
@@ -539,30 +544,48 @@ const Dashboard = () => {
                   }
 
                   try {
-                    const formData = new FormData();
-                    formData.append("title", values.title.trim());
-                    formData.append("description", values.description.trim());
-                    formData.append("liveLink", values.liveLink.trim());
-                    formData.append("githubLink", values.githubLink.trim());
-                    formData.append("image", values.image);
+                    setProjectUploadProgress(1);
 
-                    const res = await api.post("/api/admin/projects", formData);
+                    // 1. Direct signed upload to Cloudinary (binary never touches backend)
+                    const { secureUrl, publicId } = await uploadDirectToCloudinary(
+                      values.image,
+                      {
+                        folder: "portfolio",
+                        onProgress: (percent) => setProjectUploadProgress(percent),
+                      }
+                    );
+
+                    // 2. Save only the Cloudinary image URL and public_id in MongoDB
+                    const payload = {
+                      title: values.title.trim(),
+                      description: values.description.trim(),
+                      liveLink: values.liveLink.trim(),
+                      githubLink: values.githubLink.trim(),
+                      image: secureUrl,
+                      imagePublicId: publicId,
+                    };
+
+                    console.log("[Dashboard Project] Saving project to backend with Cloudinary URL:", payload.image);
+                    const res = await api.post("/api/admin/projects", payload);
+                    console.log("[Dashboard Project] Backend save successful. Response:", res.data);
 
                     showNotification(
                       "success",
-                      res.data?.message || "Project uploaded to Cloudinary & saved in MongoDB!"
+                      res.data?.message || "Project uploaded directly to Cloudinary & saved in MongoDB!"
                     );
 
                     resetForm();
+                    setProjectUploadProgress(0);
                     fetchProjects();
                   } catch (error) {
                     console.error("Project submit error:", error);
                     showNotification(
                       "error",
-                      error.response?.data?.message || "Failed to create project."
+                      error.message || error.response?.data?.message || "Failed to create project."
                     );
                   } finally {
                     setSubmitting(false);
+                    setProjectUploadProgress(0);
                   }
                 }}
               >
@@ -618,7 +641,7 @@ const Dashboard = () => {
 
                     <div>
                       <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                        Project Image * (Uploads permanently to Cloudinary)
+                        Project Image * (Direct signed upload to Cloudinary)
                       </label>
                       <input
                         type="file"
@@ -639,12 +662,31 @@ const Dashboard = () => {
                       </div>
                     )}
 
+                    {projectUploadProgress > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-gray-500 font-semibold">
+                          <span>Uploading directly to Cloudinary:</span>
+                          <span>{projectUploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${projectUploadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       disabled={isSubmitting}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
                     >
-                      {isSubmitting ? "Uploading Image to Cloudinary & Saving..." : "Submit Project"}
+                      {isSubmitting
+                        ? projectUploadProgress > 0 && projectUploadProgress < 100
+                          ? `Uploading directly to Cloudinary (${projectUploadProgress}%)...`
+                          : "Saving in MongoDB..."
+                        : "Submit Project"}
                     </button>
                   </Form>
                 )}
@@ -799,43 +841,50 @@ const Dashboard = () => {
                   }
 
                   try {
-                    const formData = new FormData();
-                    formData.append("banner", values.banner);
+                    setBannerUploadProgress(1);
 
+                    // 1. Direct signed upload to Cloudinary (binary never touches backend)
+                    const { secureUrl, publicId } = await uploadDirectToCloudinary(
+                      values.banner,
+                      {
+                        folder: "portfolio",
+                        onProgress: (percent) => setBannerUploadProgress(percent),
+                      }
+                    );
+
+                    // 2. Save only the Cloudinary image URL and public_id in MongoDB
+                    const payload = {
+                      banner: secureUrl,
+                      bannerPublicId: publicId,
+                    };
+
+                    console.log("[Dashboard Banner] Saving banner to backend with Cloudinary URL:", payload.banner);
                     let res;
                     try {
-                      res = await api.post("/api/admin/banner", formData);
+                      res = await api.post("/api/admin/banner", payload);
                     } catch (bErr) {
                       if (bErr.response?.status === 404) {
-                        res = await api.post("/api/profile/banner", formData);
+                        res = await api.post("/api/profile", payload);
                       } else {
                         throw bErr;
                       }
                     }
+                    console.log("[Dashboard Banner] Backend save successful. Response:", res.data);
 
                     showNotification(
                       "success",
-                      res.data?.message || "Banner permanently uploaded to Cloudinary!"
+                      res.data?.message || "Banner uploaded directly to Cloudinary and saved in MongoDB!"
                     );
 
                     resetForm();
+                    setBannerUploadProgress(0);
                     fetchProfile();
                   } catch (error) {
                     console.error("Banner upload error:", error);
-                    const serverMsg = error.response?.data?.message;
-                    let displayMsg = serverMsg;
-                    if (!displayMsg) {
-                      if (!error.response || error.code === "ERR_NETWORK") {
-                        displayMsg = `Cannot connect to backend (${API_BASE_URL}). Please verify your backend is running.`;
-                      } else if (error.response?.status === 404) {
-                        displayMsg = "Banner upload endpoint not found (404). Please ensure the backend server is running.";
-                      } else {
-                        displayMsg = error.message || "Failed to upload banner.";
-                      }
-                    }
-                    showNotification("error", displayMsg);
+                    showNotification("error", error.message || "Failed to upload banner.");
                   } finally {
                     setSubmitting(false);
+                    setBannerUploadProgress(0);
                   }
                 }}
               >
@@ -859,7 +908,7 @@ const Dashboard = () => {
                           Click to select a new banner image
                         </span>
                         <span className="text-xs text-gray-400 mt-1">
-                          PNG, JPG, or WEBP (Saved permanently to Cloudinary)
+                          PNG, JPG, or WEBP (Direct signed upload to Cloudinary)
                         </span>
                       </label>
                     </div>
@@ -877,12 +926,31 @@ const Dashboard = () => {
                       </div>
                     )}
 
+                    {bannerUploadProgress > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-gray-500 font-semibold">
+                          <span>Uploading directly to Cloudinary:</span>
+                          <span>{bannerUploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${bannerUploadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       disabled={isSubmitting || !values.banner}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50"
                     >
-                      {isSubmitting ? "Uploading to Cloudinary & Saving..." : "Upload & Replace Banner"}
+                      {isSubmitting
+                        ? bannerUploadProgress > 0 && bannerUploadProgress < 100
+                          ? `Uploading directly to Cloudinary (${bannerUploadProgress}%)...`
+                          : "Saving in MongoDB..."
+                        : "Upload & Replace Banner"}
                     </button>
                   </Form>
                 )}

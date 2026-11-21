@@ -20,86 +20,52 @@ const ensureHttps = (url) => {
 };
 
 /**
- * Universal upload processor:
- * Guarantees that any uploaded file (whether via multer-storage-cloudinary, diskStorage,
- * or memoryStorage) is uploaded to Cloudinary, returning a permanent HTTPS secure_url.
+ * Generates signed upload parameters for secure, direct frontend-to-Cloudinary uploads.
+ * The API Secret remains strictly on the server and is never exposed to the frontend.
  */
-const uploadFileToCloudinary = async (file, folder = "portfolio") => {
-  if (!file) {
-    throw new Error("No file uploaded to process");
-  }
-
-  // Verify Cloudinary credentials are provided
-  if (
-    !process.env.CLOUDINARY_CLOUD_NAME ||
-    !process.env.CLOUDINARY_API_KEY ||
-    !process.env.CLOUDINARY_API_SECRET
-  ) {
-    throw new Error(
-      "Cloudinary credentials are not configured in your environment variables. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your host/Render environment settings."
-    );
-  }
-
-  // 1. If multer-storage-cloudinary already uploaded the file to Cloudinary:
-  if (file.path && (file.path.startsWith("http://") || file.path.startsWith("https://"))) {
-    return {
-      secureUrl: ensureHttps(file.path),
-      publicId: file.filename || "",
-    };
-  }
-
-  if (file.secure_url) {
-    return {
-      secureUrl: ensureHttps(file.secure_url),
-      publicId: file.public_id || file.filename || "",
-    };
-  }
-
-  if (file.url && (file.url.startsWith("http://") || file.url.startsWith("https://"))) {
-    return {
-      secureUrl: ensureHttps(file.url),
-      publicId: file.public_id || file.filename || "",
-    };
-  }
-
-  // 2. If multer saved the file locally to disk (diskStorage):
-  if (file.path && fs.existsSync(file.path)) {
-    const uploadRes = await cloudinary.uploader.upload(file.path, {
-      folder,
-      resource_type: "image",
-    });
-
-    // Clean up local temp file after uploading to Cloudinary
-    try {
-      fs.unlinkSync(file.path);
-    } catch (e) {
-      // Ignore deletion error
+export const getCloudinarySignature = async (req, res) => {
+  try {
+    console.log("[Cloudinary Signature] Incoming signature request received");
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
+      console.error("[Cloudinary Signature] Error: Cloudinary credentials missing in environment variables");
+      return res.status(500).json({
+        success: false,
+        message:
+          "Cloudinary credentials not configured on backend server. Please verify CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in environment variables.",
+      });
     }
 
-    return {
-      secureUrl: ensureHttps(uploadRes.secure_url),
-      publicId: uploadRes.public_id || "",
-    };
-  }
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = req.body?.folder || req.query?.folder || "portfolio";
+    const paramsToSign = { folder, timestamp };
 
-  // 3. If multer kept the file in memory buffer (memoryStorage):
-  if (file.buffer) {
-    return new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: "image" },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve({
-            secureUrl: ensureHttps(result.secure_url),
-            publicId: result.public_id || "",
-          });
-        }
-      );
-      stream.end(file.buffer);
+    console.log(`[Cloudinary Signature] Generating signature for folder: '${folder}', timestamp: ${timestamp}, cloud: '${process.env.CLOUDINARY_CLOUD_NAME}'`);
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    console.log("[Cloudinary Signature] Signature successfully generated and dispatched to client");
+
+    res.status(200).json({
+      success: true,
+      data: {
+        signature,
+        timestamp,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        folder,
+      },
     });
+  } catch (error) {
+    console.error("[Cloudinary Signature] Error generating signature:", error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
-
-  throw new Error("File upload failed: No valid Cloudinary URL, disk path, or memory buffer found");
 };
 
 /**
@@ -205,47 +171,62 @@ export const updateProfile = async (req, res) => {
 
 export const uploadBanner = async (req, res) => {
   try {
-    if (!req.file) {
+    console.log("[Banner Update] Received banner save request:", req.body);
+    const bannerUrl = req.body?.banner || req.body?.image;
+    const bannerPublicId = req.body?.bannerPublicId || req.body?.imagePublicId;
+
+    if (
+      !bannerUrl ||
+      typeof bannerUrl !== "string" ||
+      !bannerUrl.trim() ||
+      bannerUrl.startsWith("blob:") ||
+      bannerUrl.startsWith("data:") ||
+      (!bannerUrl.startsWith("http://") && !bannerUrl.startsWith("https://"))
+    ) {
+      console.warn("[Banner Update] Rejected invalid URL format:", bannerUrl);
       return res.status(400).json({
         success: false,
-        message: "No image file uploaded",
+        message:
+          "A valid permanent Cloudinary HTTPS image URL is required. Local filenames or temporary blob previews cannot be saved.",
       });
     }
 
-    // Process upload to guarantee a permanent Cloudinary HTTPS URL
-    const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
+    const secureUrl = ensureHttps(bannerUrl.trim());
+    const newPublicId = bannerPublicId ? String(bannerPublicId).trim() : "";
 
     let profile = await Profile.findOne();
+    const oldPublicId = profile?.bannerPublicId;
 
     if (profile) {
-      // Clean up previous image from Cloudinary if it had a public ID
-      if (profile.bannerPublicId && profile.bannerPublicId !== publicId) {
-        try {
-          await cloudinary.uploader.destroy(profile.bannerPublicId);
-        } catch (destroyErr) {
-          console.warn("Could not delete previous banner from Cloudinary:", destroyErr.message);
-        }
-      }
-
       profile.banner = secureUrl;
-      profile.bannerPublicId = publicId;
+      profile.bannerPublicId = newPublicId;
       await profile.save();
     } else {
       profile = await Profile.create({
         banner: secureUrl,
-        bannerPublicId: publicId,
+        bannerPublicId: newPublicId,
       });
     }
 
-    console.log("Banner saved to MongoDB with Cloudinary URL:", profile.banner);
+    console.log("[Banner Update] Successfully saved Cloudinary URL to MongoDB:", profile.banner);
+
+    // Clean up replaced image from Cloudinary ONLY after MongoDB update succeeds
+    if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+      try {
+        await cloudinary.uploader.destroy(oldPublicId);
+        console.log("[Banner Update] Cleaned up replaced previous banner from Cloudinary:", oldPublicId);
+      } catch (destroyErr) {
+        console.warn("[Banner Update] Note: Could not destroy previous banner from Cloudinary:", destroyErr.message);
+      }
+    }
 
     res.status(200).json({
       success: true,
-      message: "Banner uploaded to Cloudinary and saved permanently in MongoDB",
+      message: "Banner saved permanently in MongoDB with Cloudinary URL",
       data: profile,
     });
   } catch (error) {
-    console.error("Upload banner error:", error);
+    console.error("[Banner Update] Error updating banner:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -427,7 +408,8 @@ export const deleteSkill = async (req, res) => {
 
 export const createProject = async (req, res) => {
   try {
-    const { title, description, liveLink, githubLink } = req.body;
+    const { title, description, liveLink, githubLink, image, imagePublicId } = req.body;
+    console.log("[Project Create] Incoming project submission:", { title, hasImage: !!image });
 
     if (!title || !title.trim()) {
       return res.status(400).json({
@@ -436,15 +418,22 @@ export const createProject = async (req, res) => {
       });
     }
 
-    if (!req.file) {
+    if (
+      !image ||
+      typeof image !== "string" ||
+      !image.trim() ||
+      image.startsWith("blob:") ||
+      image.startsWith("data:") ||
+      (!image.startsWith("http://") && !image.startsWith("https://"))
+    ) {
+      console.warn("[Project Create] Rejected invalid project image URL format:", image);
       return res.status(400).json({
         success: false,
-        message: "Project image is required",
+        message: "A valid permanent Cloudinary HTTPS image URL is required. Local filenames or temporary blobs cannot be saved.",
       });
     }
 
-    // Process upload to guarantee a permanent Cloudinary HTTPS URL
-    const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
+    const secureUrl = ensureHttps(image.trim());
 
     const project = await Project.create({
       title: title.trim(),
@@ -452,10 +441,10 @@ export const createProject = async (req, res) => {
       liveLink: liveLink ? liveLink.trim() : "",
       githubLink: githubLink ? githubLink.trim() : "",
       image: secureUrl,
-      imagePublicId: publicId,
+      imagePublicId: imagePublicId ? imagePublicId.trim() : "",
     });
 
-    console.log("Project created with Cloudinary image URL:", project.image);
+    console.log("[Project Create] Project saved permanently in MongoDB with Cloudinary URL:", project.image);
 
     res.status(201).json({
       success: true,
@@ -463,7 +452,7 @@ export const createProject = async (req, res) => {
       data: project,
     });
   } catch (error) {
-    console.error("Create project error:", error);
+    console.error("[Project Create] Error creating project:", error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -526,7 +515,8 @@ export const getProjectById = async (req, res) => {
 export const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, liveLink, githubLink } = req.body;
+    const { title, description, liveLink, githubLink, image, imagePublicId } = req.body;
+    console.log(`[Project Update] Updating project ID: ${id}`);
 
     const project = await Project.findById(id);
     if (!project) {
@@ -541,23 +531,44 @@ export const updateProject = async (req, res) => {
     if (liveLink !== undefined) project.liveLink = liveLink.trim();
     if (githubLink !== undefined) project.githubLink = githubLink.trim();
 
-    // If a new image was uploaded
-    if (req.file) {
-      const { secureUrl, publicId } = await uploadFileToCloudinary(req.file, "portfolio");
+    const oldImagePublicId = project.imagePublicId;
 
-      if (project.imagePublicId) {
-        try {
-          await cloudinary.uploader.destroy(project.imagePublicId);
-        } catch (destroyErr) {
-          console.warn("Could not destroy old project image:", destroyErr.message);
-        }
+    // If a new Cloudinary image URL was provided
+    if (image && typeof image === "string" && image.trim()) {
+      if (
+        image.startsWith("blob:") ||
+        image.startsWith("data:") ||
+        (!image.startsWith("http://") && !image.startsWith("https://"))
+      ) {
+        console.warn("[Project Update] Rejected invalid image URL:", image);
+        return res.status(400).json({
+          success: false,
+          message: "A valid permanent Cloudinary HTTPS image URL is required. Local filenames or temporary blobs cannot be saved.",
+        });
       }
 
-      project.image = secureUrl;
-      project.imagePublicId = publicId;
-    }
+      const newSecureUrl = ensureHttps(image.trim());
+      const newPublicId = imagePublicId ? imagePublicId.trim() : "";
 
-    await project.save();
+      project.image = newSecureUrl;
+      project.imagePublicId = newPublicId;
+
+      await project.save();
+      console.log("[Project Update] Project updated with new Cloudinary image URL in MongoDB:", project.image);
+
+      // Clean up previous image from Cloudinary ONLY after MongoDB update succeeds
+      if (oldImagePublicId && newPublicId && oldImagePublicId !== newPublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldImagePublicId);
+          console.log("[Project Update] Cleaned up replaced project image from Cloudinary:", oldImagePublicId);
+        } catch (destroyErr) {
+          console.warn("[Project Update] Could not destroy old project image:", destroyErr.message);
+        }
+      }
+    } else {
+      await project.save();
+      console.log("[Project Update] Project updated without changing image.");
+    }
 
     res.status(200).json({
       success: true,
@@ -565,6 +576,7 @@ export const updateProject = async (req, res) => {
       data: project,
     });
   } catch (error) {
+    console.error("[Project Update] Error updating project:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
