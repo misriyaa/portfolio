@@ -112,22 +112,45 @@ app.use((err, req, res, next) => {
 // Database Connection & Server Startup
 const PORT = process.env.PORT || 5000;
 
-const connectDB = async () => {
-  try {
-    if (!process.env.MONGODB_URL) {
-      console.error("MONGODB_URL environment variable is missing!");
-      return;
-    }
+let cachedConnectionPromise = null;
 
-    console.log("Connecting to MongoDB Atlas...");
-    await mongoose.connect(process.env.MONGODB_URL, {
-      serverSelectionTimeoutMS: 15000,
-    });
-    console.log("MongoDB connected successfully");
-  } catch (err) {
-    console.error("MongoDB Connection Warning:", err.message);
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return;
   }
+  if (!process.env.MONGODB_URL) {
+    console.error("MONGODB_URL environment variable is missing!");
+    return;
+  }
+
+  if (!cachedConnectionPromise) {
+    console.log("Connecting to MongoDB Atlas...");
+    cachedConnectionPromise = mongoose
+      .connect(process.env.MONGODB_URL, {
+        serverSelectionTimeoutMS: 15000,
+      })
+      .then((m) => {
+        console.log("MongoDB connected successfully");
+        return m;
+      })
+      .catch((err) => {
+        cachedConnectionPromise = null;
+        console.error("MongoDB Connection Warning:", err.message);
+      });
+  }
+
+  await cachedConnectionPromise;
 };
+
+// Middleware ensuring database connection is ready for incoming requests (essential for Vercel serverless)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("Database connection middleware error:", err.message);
+  }
+  next();
+});
 
 mongoose.connection.on("disconnected", () => {
   console.warn("MongoDB disconnected. Attempting reconnection...");
@@ -137,7 +160,11 @@ mongoose.connection.on("reconnected", () => {
   console.log("MongoDB reconnected successfully");
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server running and accepting requests on http://localhost:${PORT}`);
-  await connectDB();
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, async () => {
+    console.log(`Server running and accepting requests on http://localhost:${PORT}`);
+    await connectDB();
+  });
+}
+
+export default app;
